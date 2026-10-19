@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { convexTest } from "convex-test";
 import { api, internal } from "../convex/_generated/api";
+import { upsertGoogleUser } from "../convex/auth";
 import type { Id } from "../convex/_generated/dataModel";
 import schema from "../convex/schema";
 import { modules } from "./modules";
@@ -22,12 +23,19 @@ async function setup() {
 }
 
 const connect = (t: ReturnType<typeof convexTest>, userId: Id<"users">) =>
-  t.mutation(internal.gmail.saveAccount, { userId, email: "me@gmail.com", encryptedRefreshToken: "x.y" });
+  t.run((ctx) =>
+    ctx.db.insert("gmailAccounts", {
+      userId,
+      email: "me@gmail.com",
+      encryptedRefreshToken: "x.y",
+      status: "active",
+      connectedAt: Date.now(),
+    }),
+  );
 
 describe("auth enforcement", () => {
   test("signed-out callers are rejected", async () => {
     const { t } = await setup();
-    await expect(t.mutation(api.gmail.createConnectUrl, {})).rejects.toThrow();
     await expect(t.mutation(api.scans.start, { query: "", extensions: [] })).rejects.toThrow();
     expect(await t.query(api.gmail.status, {})).toBeNull();
   });
@@ -45,17 +53,48 @@ describe("auth enforcement", () => {
   });
 });
 
-describe("Gmail connect flow", () => {
-  test("createConnectUrl issues a single-use state ticket", async () => {
-    const { t, userId, asUser } = await setup();
-    const url = new URL(await asUser.mutation(api.gmail.createConnectUrl, {}));
-    expect(url.searchParams.get("scope")).toBe("https://www.googleapis.com/auth/gmail.readonly");
-    expect(url.searchParams.get("access_type")).toBe("offline");
-    expect(url.searchParams.get("redirect_uri")).toBe("https://example.convex.site/gmail/callback");
-    const state = url.searchParams.get("state")!;
+describe("Google sign-in", () => {
+  test("a new user gets an account and a Gmail connection, with no token on the user doc", async () => {
+    const { t } = await setup();
+    const id = await t.run((ctx) =>
+      upsertGoogleUser(ctx, {
+        existingUserId: null,
+        profile: { email: "new@gmail.com", name: "New", encryptedGmailToken: "iv.cipher" },
+      }),
+    );
+    const user = await t.run((ctx) => ctx.db.get(id));
+    expect(user).toMatchObject({ email: "new@gmail.com", name: "New" });
+    expect(JSON.stringify(user)).not.toContain("iv.cipher");
+    const account = await t.run((ctx) =>
+      ctx.db.query("gmailAccounts").withIndex("by_user", (q) => q.eq("userId", id)).unique(),
+    );
+    expect(account).toMatchObject({ email: "new@gmail.com", encryptedRefreshToken: "iv.cipher", status: "active" });
+  });
 
-    expect(await t.mutation(internal.gmail.consumeState, { state })).toBe(userId);
-    expect(await t.mutation(internal.gmail.consumeState, { state })).toBeNull();
+  test("signing in again links by email and replaces an expired connection", async () => {
+    const { t, userId } = await setup();
+    await connect(t, userId);
+    await t.mutation(internal.gmail.markExpired, { userId });
+    const id = await t.run((ctx) =>
+      upsertGoogleUser(ctx, {
+        existingUserId: null,
+        profile: { email: "me@example.com", encryptedGmailToken: "new.token" },
+      }),
+    );
+    expect(id).toBe(userId);
+    const accounts = await t.run((ctx) => ctx.db.query("gmailAccounts").collect());
+    expect(accounts).toHaveLength(1);
+    expect(accounts[0]).toMatchObject({ encryptedRefreshToken: "new.token", status: "active" });
+  });
+
+  test("unticking Gmail on a later sign-in keeps the existing connection", async () => {
+    const { t, userId } = await setup();
+    await connect(t, userId);
+    await t.run((ctx) => upsertGoogleUser(ctx, { existingUserId: userId, profile: { email: "me@example.com" } }));
+    const account = await t.run((ctx) =>
+      ctx.db.query("gmailAccounts").withIndex("by_user", (q) => q.eq("userId", userId)).unique(),
+    );
+    expect(account?.encryptedRefreshToken).toBe("x.y");
   });
 
   test("status reports connection and expiry without leaking tokens", async () => {

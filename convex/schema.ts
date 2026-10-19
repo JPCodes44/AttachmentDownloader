@@ -5,7 +5,8 @@ import { v } from "convex/values";
 export default defineSchema({
   ...authTables,
 
-  // One Gmail connection per user. Only internal functions read this table.
+  // One Gmail connection per user, written at Google sign-in (convex/auth.ts).
+  // Only internal functions read this table.
   gmailAccounts: defineTable({
     userId: v.id("users"),
     email: v.string(),
@@ -13,13 +14,6 @@ export default defineSchema({
     status: v.union(v.literal("active"), v.literal("expired")),
     connectedAt: v.number(),
   }).index("by_user", ["userId"]),
-
-  // One-time CSRF "state" tickets for the Gmail OAuth redirect.
-  oauthStates: defineTable({
-    state: v.string(),
-    userId: v.id("users"),
-    expiresAt: v.number(),
-  }).index("by_state", ["state"]),
 
   scans: defineTable({
     userId: v.id("users"),

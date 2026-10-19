@@ -2,24 +2,15 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import { ConvexError, v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
+import { action, type ActionCtx, internalMutation, internalQuery, query } from "./_generated/server";
+import { decrypt } from "./crypto";
 import {
-  action,
-  type ActionCtx,
-  internalMutation,
-  internalQuery,
-  mutation,
-  query,
-} from "./_generated/server";
-import { decrypt, randomToken } from "./crypto";
-import {
-  buildConsentUrl,
   GmailExpiredError,
   listLabels as fetchLabels,
   refreshAccessToken,
   revokeToken,
 } from "./gmailApi";
 
-const STATE_TTL_MS = 10 * 60 * 1000;
 // System labels that work as `label:<id>` in Gmail search.
 const SEARCHABLE_SYSTEM_LABELS = new Set(["INBOX", "SENT", "STARRED", "IMPORTANT"]);
 
@@ -35,44 +26,6 @@ export const status = query({
       .unique();
     if (!account) return { connected: false as const };
     return { connected: true as const, email: account.email, status: account.status };
-  },
-});
-
-export const createConnectUrl = mutation({
-  args: {},
-  handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new ConvexError("Sign in first");
-    const state = randomToken();
-    await ctx.db.insert("oauthStates", { state, userId, expiresAt: Date.now() + STATE_TTL_MS });
-    return buildConsentUrl(state);
-  },
-});
-
-// Returns the user the ticket was issued to, and burns it so it can't be replayed.
-export const consumeState = internalMutation({
-  args: { state: v.string() },
-  handler: async (ctx, { state }) => {
-    const row = await ctx.db
-      .query("oauthStates")
-      .withIndex("by_state", (q) => q.eq("state", state))
-      .unique();
-    if (!row) return null;
-    await ctx.db.delete(row._id);
-    return row.expiresAt > Date.now() ? row.userId : null;
-  },
-});
-
-export const saveAccount = internalMutation({
-  args: { userId: v.id("users"), email: v.string(), encryptedRefreshToken: v.string() },
-  handler: async (ctx, args) => {
-    const existing = await ctx.db
-      .query("gmailAccounts")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId))
-      .unique();
-    const fields = { ...args, status: "active" as const, connectedAt: Date.now() };
-    if (existing) await ctx.db.replace(existing._id, fields);
-    else await ctx.db.insert("gmailAccounts", fields);
   },
 });
 

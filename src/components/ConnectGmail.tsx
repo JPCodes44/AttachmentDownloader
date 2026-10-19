@@ -1,37 +1,40 @@
-import { useMutation } from "convex/react";
+import { useAuthActions } from "@convex-dev/auth/react";
 import { useState } from "react";
-import { api } from "../../convex/_generated/api";
 
+// Shown when signed in but without a working Gmail connection. Fixing it is
+// just signing in with Google again, this time with the Gmail box ticked.
 export function ConnectGmail({ expiredEmail }: { expiredEmail?: string }) {
-  const createConnectUrl = useMutation(api.gmail.createConnectUrl);
+  const { signIn } = useAuthActions();
   const [busy, setBusy] = useState(false);
-
-  const connect = async () => {
-    setBusy(true);
-    location.href = await createConnectUrl();
-  };
 
   return (
     <div className="card connect">
       {expiredEmail ? (
         <>
-          <h2>Gmail connection expired</h2>
+          <h2>Gmail access expired</h2>
           <p className="muted">
             Google ended this app's access to <b>{expiredEmail}</b>. While the app is in Google's testing mode this
-            happens every 7 days. Reconnect to keep going.
+            happens every 7 days. Sign in with Google again to keep going.
           </p>
         </>
       ) : (
         <>
-          <h2>Connect your Gmail</h2>
+          <h2>Gmail isn't connected</h2>
           <p className="muted">
-            The app asks for <b>read-only</b> access. It can list your emails and download attachments, but it can't
-            send, change or delete anything.
+            The app needs <b>read-only</b> Gmail access to find your attachments. Sign in again and make sure the
+            Gmail box is ticked on Google's permission screen.
           </p>
         </>
       )}
-      <button className="btn primary" disabled={busy} onClick={() => void connect()}>
-        {busy ? "Opening Google…" : expiredEmail ? "Reconnect Gmail" : "Connect Gmail"}
+      <button
+        className="btn primary"
+        disabled={busy}
+        onClick={() => {
+          setBusy(true);
+          void signIn("google");
+        }}
+      >
+        {busy ? "Opening Google…" : "Sign in with Google again"}
       </button>
     </div>
   );
