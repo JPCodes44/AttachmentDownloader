@@ -1,0 +1,32 @@
+{
+  "name": "gmail-attachments",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "bun run dev:convex & bun run dev:web; wait",
+    "dev:convex": "convex dev --typecheck=disable",
+    "dev:web": "bun --hot server.ts",
+    "start": "NODE_ENV=production bun server.ts",
+    "build": "bun build --check ./index.html --outdir dist --minify",
+    "typecheck": "bun check",
+    "test": "bun test"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "convex-test": "^0.0.62",
+    "jose": "^6.2.12"
+  },
+  "peerDependencies": {
+    "typescript": "7"
+  },
+  "dependencies": {
+    "@auth/core": "^0.41.1",
+    "@convex-dev/auth": "^0.0.96",
+    "client-zip": "^2.5.1",
+    "convex": "^1.47.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  }
+}
