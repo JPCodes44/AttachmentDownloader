@@ -6,17 +6,17 @@ import { App } from "./App";
 
 const root = createRoot(document.getElementById("root")!);
 
-fetch("/api/config")
-  .then((r) => r.json() as Promise<{ convexUrl?: string }>)
-  .then(({ convexUrl }) => {
-    if (!convexUrl) throw new Error("CONVEX_URL is not set. Run `bunx convex dev` first.");
-    const convex = new ConvexReactClient(convexUrl);
-    root.render(
-      <StrictMode>
-        <ConvexAuthProvider client={convex}>
-          <App />
-        </ConvexAuthProvider>
-      </StrictMode>,
-    );
-  })
-  .catch((err: Error) => root.render(<p className="fatal">{err.message}</p>));
+// Inlined at bundle time by Bun: server.ts in dev, the build script for staging.
+const convexUrl = process.env.VITE_CONVEX_URL;
+
+if (!convexUrl) {
+  root.render(<p className="fatal">VITE_CONVEX_URL is not set. Run `bunx convex dev` first.</p>);
+} else {
+  root.render(
+    <StrictMode>
+      <ConvexAuthProvider client={new ConvexReactClient(convexUrl)}>
+        <App />
+      </ConvexAuthProvider>
+    </StrictMode>,
+  );
+}

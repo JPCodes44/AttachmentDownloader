@@ -1,5 +1,6 @@
+import { registerStaticRoutes } from "@convex-dev/static-hosting";
 import { httpRouter } from "convex/server";
-import { internal } from "./_generated/api";
+import { components, internal } from "./_generated/api";
 import { httpAction } from "./_generated/server";
 import { auth } from "./auth";
 import { encrypt } from "./crypto";
@@ -43,5 +44,8 @@ http.route({
     }
   }),
 });
+
+// The built frontend (staging/production). Exact routes above take priority.
+registerStaticRoutes(http, components.staticHosting);
 
 export default http;

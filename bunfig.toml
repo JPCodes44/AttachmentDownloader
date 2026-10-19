@@ -1,0 +1,3 @@
+[serve.static]
+# Inline VITE_CONVEX_URL into the frontend bundle served by server.ts.
+env = "VITE_*"

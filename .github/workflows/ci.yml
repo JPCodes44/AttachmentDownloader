@@ -1,0 +1,82 @@
+name: CI/CD
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, closed]
+  workflow_dispatch: # manual "deploy main to staging" button in the Actions tab
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Secret scan, typecheck, test, build
+    # Run on open/updated PRs, on merge, and on manual runs. Skip PRs closed without merging.
+    if: github.event.action != 'closed' || github.event.pull_request.merged
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # For a merged PR, check exactly what landed on main.
+          ref: ${{ github.event.pull_request.merged && github.event.pull_request.merge_commit_sha || '' }}
+          fetch-depth: 0 # gitleaks scans the full history
+
+      - name: Scan for committed secrets (gitleaks)
+        run: |
+          curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.21.2/gitleaks_8.21.2_linux_x64.tar.gz \
+            | tar -xz gitleaks
+          ./gitleaks git --redact --no-banner -v .
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.3
+
+      - run: bun install --frozen-lockfile
+      - run: bun run typecheck
+      - run: bun test
+      - name: Build
+        run: bun run build
+        env:
+          VITE_CONVEX_URL: https://placeholder.convex.cloud
+
+  deploy-staging:
+    name: Deploy to staging
+    needs: checks
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+      url: ${{ vars.STAGING_URL }}
+    concurrency:
+      group: deploy-staging
+      cancel-in-progress: false # never interrupt a deploy halfway
+    env:
+      # Scopes every Convex command to the staging deployment.
+      CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.merged && github.event.pull_request.merge_commit_sha || '' }}
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.3
+
+      - run: bun install --frozen-lockfile
+
+      - name: Check the deploy key is configured
+        run: |
+          if [ -z "$CONVEX_DEPLOY_KEY" ]; then
+            echo "::error::Add a CONVEX_DEPLOY_KEY secret to the 'staging' environment (see README)."
+            exit 1
+          fi
+
+      - name: Deploy Convex backend
+        run: bunx convex deploy --typecheck=disable
+
+      - name: Build and upload the website
+        run: bunx static-hosting upload --build-command "bun run build"
+
+      - name: Summary
+        run: echo "Staging is live at ${{ vars.STAGING_URL }}" >> "$GITHUB_STEP_SUMMARY"

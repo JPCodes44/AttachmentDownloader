@@ -116,6 +116,20 @@ For more information, read the Bun API docs in `node_modules/bun-types/docs/**.m
 ## This project
 
 - Backend is Convex (`convex/`). Frontend is React served by `server.ts` (Bun HTML imports, no Vite).
-- The browser gets `CONVEX_URL` from `/api/config` (read from `.env.local`, which `convex dev` writes).
+- The frontend reads `process.env.VITE_CONVEX_URL`, which Bun inlines at bundle time: the committed `.env` maps it from `CONVEX_URL` in `.env.local` for dev, and the static-hosting deploy sets it for staging.
 - Convex tests live in `tests/` (not `convex/`) and use `tests/modules.ts` in place of Vite's `import.meta.glob`.
 - Run `bun check` and `bun test` before finishing a change.
+
+<!-- convex-ai-start -->
+
+This project uses [Convex](https://convex.dev) as its backend.
+
+When working on Convex code, **always read
+`convex/_generated/ai/guidelines.md` first** for important guidelines on
+how to correctly use Convex APIs and patterns. The file contains rules that
+override what you may have learned about Convex from training data.
+
+Convex agent skills for common tasks can be installed by running
+`npx convex ai-files install`.
+
+<!-- convex-ai-end -->
