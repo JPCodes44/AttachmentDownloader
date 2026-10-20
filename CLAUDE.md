@@ -116,7 +116,7 @@ For more information, read the Bun API docs in `node_modules/bun-types/docs/**.m
 ## This project
 
 - Backend is Convex (`convex/`). Frontend is React served by `server.ts` (Bun HTML imports, no Vite).
-- The frontend reads `process.env.VITE_CONVEX_URL`, which Bun inlines at bundle time: the committed `.env` maps it from `CONVEX_URL` in `.env.local` for dev, and the static-hosting deploy sets it for staging.
+- The frontend reads `process.env.VITE_CONVEX_URL`, which Bun inlines at bundle time: the committed `.env` maps it from `CONVEX_URL` in `.env.local` for dev, and CI sets it from the `STAGING_CONVEX_URL` variable for staging, which is hosted on Vercel.
 - Convex tests live in `tests/` (not `convex/`) and use `tests/modules.ts` in place of Vite's `import.meta.glob`.
 - Run `bun check` and `bun test` before finishing a change.
 
