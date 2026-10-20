@@ -8,8 +8,9 @@ import { SignIn } from "./components/SignIn";
 export function App() {
   const { isLoading, isAuthenticated } = useConvexAuth();
 
-  if (isLoading) return <div className="center muted">Loading…</div>;
-  if (!isAuthenticated) return <SignIn />;
+  // The landing page shows while auth loads too: it matches the prerendered
+  // HTML, so signed-out visitors (most of them) see no flash of "Loading…".
+  if (isLoading || !isAuthenticated) return <SignIn />;
   return <SignedIn />;
 }
 
