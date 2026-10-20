@@ -6,6 +6,13 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { Landing } from "../src/components/Landing";
 import { FAQ } from "../src/lib/faq";
 
+// Bun only inlines VITE_* variables that are set at build time. An unset one stays as
+// `process.env.X`, which throws in the browser and stops the whole app from starting.
+for (const js of new Bun.Glob("dist/**/*.js").scanSync()) {
+  const leftover = (await Bun.file(js).text()).match(/process\.env\.\w+/);
+  if (leftover) throw new Error(`${js} still references ${leftover[0]}: set it for the build`);
+}
+
 const file = Bun.file("dist/index.html");
 const html = await file.text();
 

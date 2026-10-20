@@ -36,6 +36,7 @@ jobs:
         run: bun run build
         env:
           VITE_CONVEX_URL: https://placeholder.convex.cloud
+          VITE_GOOGLE_CHAT: "off"
 
   deploy-staging:
     needs: checks

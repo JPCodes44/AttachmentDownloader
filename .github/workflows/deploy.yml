@@ -50,6 +50,7 @@ jobs:
         run: bun run build
         env:
           VITE_CONVEX_URL: ${{ vars.CONVEX_URL }}
+          VITE_GOOGLE_CHAT: ${{ vars.GOOGLE_CHAT || 'off' }}
 
       - name: Package for Vercel (static files, clean page URLs, single-page-app fallback)
         run: |
