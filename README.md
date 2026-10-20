@@ -3,19 +3,27 @@
 </p>
 
 <p align="center">
-  <img src="docs/app.png" alt="Search filters, a list of found attachments with three ticked, and a Download ZIP button" width="100%">
+  <img src="docs/system.svg" alt="The big picture: Vercel serves the site, the browser talks to Convex, Convex talks to Google sign-in and the Gmail API, GitHub Actions deploys both" width="100%">
 </p>
 
 <p align="center">
-  <img src="docs/sign-in.png" alt="Sign-in page: one Google consent screen with read-only Gmail access" width="70%">
+  <img src="docs/how-it-works.svg" alt="Step by step: sign in, search, pick, download" width="100%">
 </p>
 
 <p align="center">
-  <img src="docs/how-it-works.svg" alt="How it works: sign in, search, pick, download. The Gmail key stays encrypted in Convex; file bytes go straight from Gmail to the browser." width="100%">
+  <img src="docs/scan-loop.svg" alt="How a scan works: list 100 emails, read each one, save file details, repeat until there are no more pages" width="100%">
 </p>
 
 <p align="center">
-  <img src="docs/pipeline.svg" alt="Pull request, checks, merge, staging, approve, production" width="100%">
+  <img src="docs/key-path.svg" alt="Where the Gmail key goes: encrypted immediately, stored only on the server, swapped for 1-hour tokens" width="100%">
+</p>
+
+<p align="center">
+  <img src="docs/environments.svg" alt="Three copies of the app: dev, staging and production" width="100%">
+</p>
+
+<p align="center">
+  <img src="docs/pipeline.svg" alt="Shipping a change: pull request, checks, merge, staging, approve, production" width="100%">
 </p>
 
 <p align="center">
