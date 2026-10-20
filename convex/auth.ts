@@ -30,6 +30,7 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
       async profile(google, tokens) {
         // Google lets people untick the Gmail box, so check what was granted.
         const grantedGmail = tokens.scope?.split(" ").includes(GMAIL_SCOPE) ?? false;
+        if (google.email_verified !== true) throw new Error("Google account email is not verified");
         return {
           id: google.sub,
           email: google.email,
@@ -60,18 +61,13 @@ export async function upsertGoogleUser(
   const { encryptedGmailToken, ...user } = profile;
   const fields = { ...user, emailVerificationTime: Date.now() };
 
-  // Google verifies emails, so an existing user with the same email is the same person.
-  const userId =
-    existingUserId ??
-    (await ctx.db
-      .query("users")
-      .withIndex("email", (q) => q.eq("email", profile.email))
-      .unique())?._id ??
-    null;
+  // existingUserId comes from the Google account id (sub). Never link by email:
+  // a different Google account can end up with the same address (recreated
+  // Workspace user, re-registered domain) and must not inherit this user's Gmail.
   let id: Id<"users">;
-  if (userId) {
-    await ctx.db.patch(userId, fields);
-    id = userId;
+  if (existingUserId) {
+    await ctx.db.patch(existingUserId, fields);
+    id = existingUserId;
   } else {
     id = await ctx.db.insert("users", fields);
   }

@@ -20,25 +20,49 @@ function clientCredentials() {
   return { id, secret };
 }
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const backoff = (attempt: number) => sleep(500 * 2 ** attempt + Math.random() * 250);
+const MAX_ATTEMPTS = 5;
+
+// fetch, retrying network failures (DNS, reset connections) with backoff.
+async function fetchRetrying(url: string | URL, init: RequestInit, attempt: number): Promise<Response | null> {
+  try {
+    return await fetch(url, init);
+  } catch (err) {
+    if (attempt >= MAX_ATTEMPTS - 1) throw err;
+    return null;
+  }
+}
+
 async function tokenRequest(params: Record<string, string>) {
   const { id, secret } = clientCredentials();
-  const res = await fetch(TOKEN_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ client_id: id, client_secret: secret, ...params }),
-  });
-  const body = (await res.json()) as {
-    access_token?: string;
-    refresh_token?: string;
-    expires_in?: number;
-    error?: string;
-    error_description?: string;
-  };
-  if (!res.ok) {
-    if (body.error === "invalid_grant") throw new GmailExpiredError();
-    throw new Error(`Google token request failed: ${body.error_description ?? body.error ?? res.status}`);
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetchRetrying(
+      TOKEN_URL,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ client_id: id, client_secret: secret, ...params }),
+      },
+      attempt,
+    );
+    if (!res || (res.status >= 500 && attempt < MAX_ATTEMPTS - 1)) {
+      await backoff(attempt);
+      continue;
+    }
+    const body = (await res.json().catch(() => ({}))) as {
+      access_token?: string;
+      refresh_token?: string;
+      expires_in?: number;
+      error?: string;
+      error_description?: string;
+    };
+    if (!res.ok) {
+      if (body.error === "invalid_grant") throw new GmailExpiredError();
+      throw new Error(`Google token request failed: ${body.error_description ?? body.error ?? res.status}`);
+    }
+    return body;
   }
-  return body;
 }
 
 export async function refreshAccessToken(refreshToken: string) {
@@ -53,20 +77,29 @@ export async function revokeToken(token: string): Promise<void> {
   });
 }
 
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+// Gmail's per-user quota errors come back as 403 with one of these reasons.
+const RATE_LIMIT_REASONS = /"(rateLimitExceeded|userRateLimitExceeded)"/;
 
-// GET a Gmail endpoint, retrying rate limits and server errors with backoff.
+export class GmailNotFoundError extends Error {}
+
+// GET a Gmail endpoint, retrying network errors, rate limits and server errors with backoff.
 export async function gmailGet<T>(accessToken: string, path: string, params: Record<string, string> = {}): Promise<T> {
   const url = new URL(GMAIL + path);
   for (const [k, val] of Object.entries(params)) url.searchParams.set(k, val);
   for (let attempt = 0; ; attempt++) {
-    const res = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
-    if (res.ok) return (await res.json()) as T;
-    const retryable = res.status === 429 || res.status >= 500;
-    if (!retryable || attempt >= 4) {
-      throw new Error(`Gmail API ${path} failed with ${res.status}: ${await res.text()}`);
+    const res = await fetchRetrying(url, { headers: { Authorization: `Bearer ${accessToken}` } }, attempt);
+    if (!res) {
+      await backoff(attempt);
+      continue;
     }
-    await sleep(500 * 2 ** attempt + Math.random() * 250);
+    if (res.ok) return (await res.json()) as T;
+    const text = await res.text();
+    if (res.status === 404) throw new GmailNotFoundError(`Gmail API ${path} not found`);
+    const retryable = res.status === 429 || res.status >= 500 || (res.status === 403 && RATE_LIMIT_REASONS.test(text));
+    if (!retryable || attempt >= MAX_ATTEMPTS - 1) {
+      throw new Error(`Gmail API ${path} failed with ${res.status}: ${text}`);
+    }
+    await backoff(attempt);
   }
 }
 
@@ -80,11 +113,17 @@ export function listMessages(accessToken: string, q: string, pageToken?: string)
   });
 }
 
-export function getMessage(accessToken: string, id: string) {
-  return gmailGet<GmailMessage>(accessToken, `/messages/${id}`, {
-    format: "full",
-    fields: "id,internalDate,payload",
-  });
+// Null when the message was deleted between listing and fetching it.
+export async function getMessage(accessToken: string, id: string): Promise<GmailMessage | null> {
+  try {
+    return await gmailGet<GmailMessage>(accessToken, `/messages/${id}`, {
+      format: "full",
+      fields: "id,internalDate,payload",
+    });
+  } catch (err) {
+    if (err instanceof GmailNotFoundError) return null;
+    throw err;
+  }
 }
 
 export function listLabels(accessToken: string) {

@@ -1,6 +1,6 @@
-import { describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, test } from "bun:test";
 import { decrypt, encrypt } from "../convex/crypto";
-import { mapLimit } from "../convex/gmailApi";
+import { getMessage, gmailGet, mapLimit } from "../convex/gmailApi";
 import { matchesExtensions, withAttachmentFilter } from "../convex/scans";
 import { base64UrlToBytes } from "../src/lib/download";
 import { sanitizeFilename, uniqueFilenames } from "../src/lib/filenames";
@@ -56,6 +56,8 @@ describe("scan helpers", () => {
     expect(withAttachmentFilter("from:bob")).toBe("from:bob has:attachment");
     expect(withAttachmentFilter("has:attachment from:bob")).toBe("has:attachment from:bob");
     expect(withAttachmentFilter("  ")).toBe("has:attachment");
+    expect(withAttachmentFilter("has:attachment OR in:anywhere")).toBe("(has:attachment OR in:anywhere) has:attachment");
+    expect(withAttachmentFilter("{has:attachment in:anywhere}")).toBe("({has:attachment in:anywhere}) has:attachment");
   });
 
   test("matchesExtensions", () => {
@@ -95,5 +97,46 @@ describe("crypto and encoding", () => {
   test("base64url decoding", () => {
     // "hi?>" encodes to "aGk_Pg" in base64url
     expect(new TextDecoder().decode(base64UrlToBytes("aGk_Pg"))).toBe("hi?>");
+  });
+});
+
+describe("Gmail API retries", () => {
+  const realFetch = globalThis.fetch;
+  afterEach(() => {
+    globalThis.fetch = realFetch;
+  });
+
+  // Each call takes the next scripted response; an Error is thrown like a network failure.
+  function script(...responses: (Response | Error)[]) {
+    const calls: string[] = [];
+    globalThis.fetch = (async (url: string | URL) => {
+      calls.push(String(url));
+      const next = responses.shift();
+      if (!next) throw new Error("unexpected fetch");
+      if (next instanceof Error) throw next;
+      return next;
+    }) as typeof fetch;
+    return calls;
+  }
+
+  test("a message deleted mid-scan is skipped, not fatal", async () => {
+    script(new Response("{}", { status: 404 }));
+    expect(await getMessage("token", "gone")).toBeNull();
+  });
+
+  test("network errors and per-user rate limits are retried", async () => {
+    const calls = script(
+      new TypeError("fetch failed"),
+      new Response('{"error":{"errors":[{"reason":"userRateLimitExceeded"}]}}', { status: 403 }),
+      Response.json({ ok: true }),
+    );
+    expect(await gmailGet("token", "/labels")).toEqual({ ok: true });
+    expect(calls).toHaveLength(3);
+  }, 10_000);
+
+  test("other 403s fail straight away", async () => {
+    const calls = script(new Response('{"error":{"errors":[{"reason":"insufficientPermissions"}]}}', { status: 403 }));
+    await expect(gmailGet("token", "/labels")).rejects.toThrow("403");
+    expect(calls).toHaveLength(1);
   });
 });

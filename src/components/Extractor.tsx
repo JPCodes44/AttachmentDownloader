@@ -52,6 +52,8 @@ export function Extractor() {
     try {
       const all = await convex.query(api.attachments.allForScan, { scanId, includeInline });
       setSelected(new Map(all.map((i) => [i._id, i])));
+    } catch (err) {
+      setError(`Couldn't select everything: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       setSelectingAll(false);
     }
@@ -131,6 +133,12 @@ export function Extractor() {
           </div>
           {running && <div className="indeterminate" aria-hidden="true" />}
           {scanError && <div className="banner bad">{scanError}</div>}
+          {scan.limitReached && (
+            <div className="banner bad">
+              Stopped early: a search covers at most 25,000 emails or 10,000 attachments. Narrow your search to see the
+              rest.
+            </div>
+          )}
 
           <AttachmentTable
             scanId={scan._id}

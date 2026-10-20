@@ -16,7 +16,14 @@ export function App() {
 function SignedIn() {
   const gmail = useQuery(api.gmail.status);
   const disconnect = useAction(api.gmail.disconnect);
+  const deleteAccount = useAction(api.account.deleteAccount);
   const { signOut } = useAuthActions();
+
+  const confirmDelete = async () => {
+    if (!confirm("Delete your account? This revokes Gmail access and deletes your search results.")) return;
+    await deleteAccount();
+    await signOut().catch(() => {}); // the session is already gone server-side
+  };
 
   return (
     <div className="shell">
@@ -36,6 +43,9 @@ function SignedIn() {
           )}
           <button className="btn ghost small" onClick={() => void signOut()}>
             Sign out
+          </button>
+          <button className="btn ghost small" onClick={() => void confirmDelete()}>
+            Delete account
           </button>
         </div>
       </header>

@@ -2,9 +2,25 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import { ConvexError, v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
-import { internalAction, internalMutation, internalQuery, mutation, type QueryCtx, query } from "./_generated/server";
+import {
+  internalAction,
+  internalMutation,
+  internalQuery,
+  mutation,
+  type MutationCtx,
+  type QueryCtx,
+  query,
+} from "./_generated/server";
 import { accessTokenForUser } from "./gmail";
 import { getMessage, listMessages, mapLimit } from "./gmailApi";
+import {
+  MAX_ATTACHMENTS_PER_SCAN,
+  MAX_EXTENSION_LENGTH,
+  MAX_EXTENSIONS,
+  MAX_MESSAGES_PER_SCAN,
+  MAX_QUERY_LENGTH,
+  rateLimiter,
+} from "./limits";
 import { type AttachmentMeta, extractAttachments } from "./parts";
 
 const MESSAGE_CONCURRENCY = 8;
@@ -21,8 +37,11 @@ const attachmentValidator = v.object({
   isInline: v.boolean(),
 });
 
+// Gmail ANDs space-separated terms, so has:attachment anywhere at the top level
+// filters everything. OR, {} or () could put it inside a branch, so wrap those.
 export function withAttachmentFilter(query: string): string {
   const q = query.trim();
+  if (/\bOR\b|[{}()]/.test(q)) return `(${q}) has:attachment`;
   return /\bhas:attachment\b/.test(q) ? q : `${q} has:attachment`.trim();
 }
 
@@ -45,21 +64,21 @@ export const start = mutation({
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new ConvexError("Sign in first");
+    if (args.query.length > MAX_QUERY_LENGTH) throw new ConvexError("Search is too long");
+    if (args.extensions.length > MAX_EXTENSIONS || args.extensions.some((e) => e.length > MAX_EXTENSION_LENGTH)) {
+      throw new ConvexError("Too many file types");
+    }
     const account = await ctx.db
       .query("gmailAccounts")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .unique();
     if (!account) throw new ConvexError("GMAIL_NOT_CONNECTED");
     if (account.status === "expired") throw new ConvexError("GMAIL_EXPIRED");
+    const { ok } = await rateLimiter.limit(ctx, "startScan", { key: userId });
+    if (!ok) throw new ConvexError("Too many searches. Wait a few minutes and try again.");
 
     // Each user keeps only their latest scan; older ones are stopped and cleaned up.
-    for (const old of await ctx.db
-      .query("scans")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect()) {
-      if (old.status === "running") await ctx.db.patch(old._id, { status: "cancelled" });
-      await ctx.scheduler.runAfter(0, internal.scans.cleanup, { scanId: old._id });
-    }
+    await deleteScans(ctx, userId);
 
     const scanId = await ctx.db.insert("scans", {
       userId,
@@ -70,6 +89,7 @@ export const start = mutation({
       attachmentsFound: 0,
       inlineFound: 0,
       createdAt: Date.now(),
+      updatedAt: Date.now(),
     });
     await ctx.scheduler.runAfter(0, internal.scans.scanPage, { scanId });
     return scanId;
@@ -117,9 +137,13 @@ export const scanPage = internalAction({
       const { accessToken } = await accessTokenForUser(ctx, scan.userId);
       const page = await listMessages(accessToken, scan.query, pageToken);
       const ids = (page.messages ?? []).map((m) => m.id);
-      const messages = await mapLimit(ids, MESSAGE_CONCURRENCY, (id) => getMessage(accessToken, id));
-      const attachments: AttachmentMeta[] = messages
-        .flatMap(extractAttachments)
+      // Extract inside each worker so only a few full messages are in memory at once.
+      const perMessage = await mapLimit(ids, MESSAGE_CONCURRENCY, async (id) => {
+        const message = await getMessage(accessToken, id);
+        return message ? extractAttachments(message) : [];
+      });
+      const attachments: AttachmentMeta[] = perMessage
+        .flat()
         .filter((a) => matchesExtensions(a.filename, scan.extensions));
       await ctx.runMutation(internal.scans.recordPage, {
         scanId,
@@ -150,17 +174,27 @@ export const recordPage = internalMutation({
     const scan = await ctx.db.get(scanId);
     // Cancelled while this page was in flight: drop the results.
     if (!scan || scan.status !== "running") return;
-    for (const a of attachments) {
+    const room = MAX_ATTACHMENTS_PER_SCAN - scan.attachmentsFound - scan.inlineFound;
+    const kept = attachments.slice(0, Math.max(0, room));
+    for (const a of kept) {
       await ctx.db.insert("attachments", { ...a, scanId, userId: scan.userId });
     }
-    const inline = attachments.filter((a) => a.isInline).length;
+    const inline = kept.filter((a) => a.isInline).length;
+    const scanned = scan.messagesScanned + messagesScanned;
+    const limitReached =
+      kept.length < attachments.length ||
+      scan.attachmentsFound + scan.inlineFound + kept.length >= MAX_ATTACHMENTS_PER_SCAN ||
+      scanned >= MAX_MESSAGES_PER_SCAN;
+    const more = !!nextPageToken && !limitReached;
     await ctx.db.patch(scanId, {
-      messagesScanned: scan.messagesScanned + messagesScanned,
-      attachmentsFound: scan.attachmentsFound + attachments.length - inline,
+      messagesScanned: scanned,
+      attachmentsFound: scan.attachmentsFound + kept.length - inline,
       inlineFound: scan.inlineFound + inline,
-      status: nextPageToken ? "running" : "done",
+      status: more ? "running" : "done",
+      ...(limitReached && nextPageToken ? { limitReached: true } : {}),
+      updatedAt: Date.now(),
     });
-    if (nextPageToken) {
+    if (more) {
       await ctx.scheduler.runAfter(0, internal.scans.scanPage, { scanId, pageToken: nextPageToken });
     }
   },
@@ -171,6 +205,54 @@ export const recordError = internalMutation({
   handler: async (ctx, { scanId, error }) => {
     const scan = await ctx.db.get(scanId);
     if (scan?.status === "running") await ctx.db.patch(scanId, { status: "error", error });
+  },
+});
+
+// Stops every scan the user has and schedules deletion of its rows.
+export async function deleteScans(ctx: MutationCtx, userId: Id<"users">) {
+  for (const old of await ctx.db
+    .query("scans")
+    .withIndex("by_user", (q) => q.eq("userId", userId))
+    .collect()) {
+    if (old.status === "running") await ctx.db.patch(old._id, { status: "cancelled" });
+    await ctx.scheduler.runAfter(0, internal.scans.cleanup, { scanId: old._id });
+  }
+}
+
+// Longer than the 10-minute action limit, so a live page is never mistaken for a dead one.
+export const STALE_AFTER_MS = 15 * 60 * 1000;
+
+// A scan whose page action died (crash, out of memory, deploy) would sit at "running" forever.
+export const failStaleScans = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const stale = await ctx.db
+      .query("scans")
+      .withIndex("by_status_and_updatedAt", (q) =>
+        q.eq("status", "running").lt("updatedAt", Date.now() - STALE_AFTER_MS),
+      )
+      .take(100);
+    for (const scan of stale) {
+      await ctx.db.patch(scan._id, { status: "error", error: "The scan stopped responding. Try again." });
+    }
+  },
+});
+
+export const RETAIN_SCANS_MS = 30 * 24 * 60 * 60 * 1000;
+
+// Scan results are mailbox metadata (senders, subjects, filenames); don't keep them forever.
+export const deleteOldScans = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const old = await ctx.db
+      .query("scans")
+      .withIndex("by_creation_time", (q) => q.lt("_creationTime", Date.now() - RETAIN_SCANS_MS))
+      .take(100);
+    for (const scan of old) {
+      if (scan.status === "running") await ctx.db.patch(scan._id, { status: "cancelled" });
+      await ctx.scheduler.runAfter(0, internal.scans.cleanup, { scanId: scan._id });
+    }
+    if (old.length === 100) await ctx.scheduler.runAfter(60_000, internal.scans.deleteOldScans, {});
   },
 });
 
