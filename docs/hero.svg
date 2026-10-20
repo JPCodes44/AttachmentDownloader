@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="300" viewBox="0 0 1200 300">
+<rect width="1200" height="300" rx="20" fill="#141b2b"/>
+<g transform="translate(72,74) scale(1.9)" fill="none" stroke="#7d9bff"><rect x="0" y="0" width="36" height="44" rx="18" stroke-width="5"/><rect x="9" y="9" width="12" height="27" rx="6" stroke-width="4"/></g>
+<text x="180" y="140" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="60" font-weight="800" fill="#ffffff" text-anchor="start">Gmail Attachments</text>
+<text x="182" y="184" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="24" font-weight="400" fill="#b8c2d6" text-anchor="start">Every attachment in your inbox, downloaded as one ZIP.</text>
+<rect x="182" y="216" width="159" height="38" rx="19" fill="#1f2a44" stroke="#33415f"/>
+<text x="261.5" y="241" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" font-weight="600" fill="#dbe3f5" text-anchor="middle">Read-only Gmail</text>
+<rect x="353.0" y="216" width="219" height="38" rx="19" fill="#1f2a44" stroke="#33415f"/>
+<text x="462.6" y="241" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" font-weight="600" fill="#dbe3f5" text-anchor="middle">Pick all or just a few</text>
+<rect x="584.2" y="216" width="168" height="38" rx="19" fill="#1f2a44" stroke="#33415f"/>
+<text x="668.0" y="241" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" font-weight="600" fill="#dbe3f5" text-anchor="middle">Encrypted tokens</text>
+<rect x="763.8000000000001" y="216" width="125" height="38" rx="19" fill="#1f2a44" stroke="#33415f"/>
+<text x="826.1" y="241" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" font-weight="600" fill="#dbe3f5" text-anchor="middle">Free to run</text>
+</svg>
