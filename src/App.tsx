@@ -31,7 +31,7 @@ function SignedIn() {
       <header className="topbar">
         <div className="brand">
           <span className="brand-mark" aria-hidden="true" />
-          Gmail Attachments
+          AttachmentDownloader
         </div>
         <div className="topbar-actions">
           {gmail?.connected && (

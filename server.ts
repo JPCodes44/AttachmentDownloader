@@ -21,4 +21,4 @@ const server = Bun.serve({
   development: process.env.NODE_ENV !== "production" && { hmr: true, console: true },
 });
 
-console.log(`Gmail Attachments running at ${server.url}`);
+console.log(`AttachmentDownloader running at ${server.url}`);

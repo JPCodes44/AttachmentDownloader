@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/hero.svg" alt="Gmail Attachments: every attachment in your inbox, downloaded as one ZIP" width="100%">
+  <img src="docs/hero.svg" alt="AttachmentDownloader: every attachment in your inbox, downloaded as one ZIP" width="100%">
 </p>
 
 <p align="center">

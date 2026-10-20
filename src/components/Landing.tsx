@@ -8,7 +8,7 @@ export function Landing({ onSignIn }: { onSignIn?: () => void }) {
       <header className="topbar">
         <a className="brand" href="/">
           <span className="brand-mark" aria-hidden="true" />
-          Gmail Attachments
+          AttachmentDownloader
         </a>
         <a className="small" href="/gmail-attachments-not-downloading">
           Can't download an attachment?

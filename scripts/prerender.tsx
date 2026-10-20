@@ -17,7 +17,7 @@ const faqSchema = {
   "@graph": [
     {
       "@type": "WebApplication",
-      name: "Gmail Attachments",
+      name: "AttachmentDownloader",
       url: "https://gmail-attachments.vercel.app/",
       applicationCategory: "UtilitiesApplication",
       operatingSystem: "Any (web browser)",
