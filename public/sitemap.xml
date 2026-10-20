@@ -2,5 +2,7 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://attachmentdownloader.vercel.app/</loc><lastmod>2026-10-19</lastmod></url>
   <url><loc>https://attachmentdownloader.vercel.app/gmail-attachments-not-downloading</loc><lastmod>2026-10-19</lastmod></url>
+  <url><loc>https://attachmentdownloader.vercel.app/download-all-gmail-attachments</loc><lastmod>2026-10-20</lastmod></url>
+  <url><loc>https://attachmentdownloader.vercel.app/download-gmail-attachments-from-sender</loc><lastmod>2026-10-20</lastmod></url>
   <url><loc>https://attachmentdownloader.vercel.app/privacy</loc><lastmod>2026-10-19</lastmod></url>
 </urlset>

@@ -72,8 +72,10 @@ export function Landing({ onSignIn }: { onSignIn?: () => void }) {
       </main>
 
       <footer className="landing-footer muted small">
-        <a href="/privacy">Privacy</a>
+        <a href="/download-all-gmail-attachments">Download all Gmail attachments</a>
+        <a href="/download-gmail-attachments-from-sender">Attachments from one sender</a>
         <a href="/gmail-attachments-not-downloading">Fix Gmail attachment downloads</a>
+        <a href="/privacy">Privacy</a>
       </footer>
     </div>
   );

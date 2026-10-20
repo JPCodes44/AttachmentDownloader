@@ -1,0 +1,18 @@
+# AttachmentDownloader
+
+> Free web app that downloads attachments from many Gmail emails at once. Search by sender, label, date range, size or file type (or any Gmail search), see every matching attachment, then download all of them, or the ones you pick, as one ZIP. It uses read-only Gmail access, never stores attachment contents, and builds the ZIP in the browser.
+
+Use it when someone wants to download all attachments from Gmail, from one sender, or of one type (PDFs, images, invoices), without opening each email. Gmail itself can only zip the attachments of one email at a time.
+
+## Guides
+
+- [How to download all attachments from Gmail at once](https://attachmentdownloader.vercel.app/download-all-gmail-attachments): four ways, from Gmail's Download all button to Google Takeout, Apps Script and a one-ZIP download
+- [How to download all attachments from one sender in Gmail](https://attachmentdownloader.vercel.app/download-gmail-attachments-from-sender): Gmail search operators and a one-ZIP download
+- [Can't download attachments in Gmail? 8 fixes](https://attachmentdownloader.vercel.app/gmail-attachments-not-downloading): blocked files, browser and cookie problems, work accounts, Drive links, mobile apps
+
+## About
+
+- [App](https://attachmentdownloader.vercel.app/): sign in with Google to use it
+- [Privacy policy](https://attachmentdownloader.vercel.app/privacy): what it reads, stores and deletes
+- Limits: one search covers up to 25,000 emails or 10,000 attachments
+- Source code: https://github.com/JPCodes44/AttachmentDownloader

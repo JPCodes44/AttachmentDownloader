@@ -67,9 +67,9 @@ jobs:
                 "permissions-policy": "camera=(), microphone=(), geolocation=()"
               }, "continue": true },
               { "src": "/[^/]+-[a-z0-9]{8}\\.(js|css|svg)$", "headers": { "cache-control": "public, max-age=31536000, immutable" }, "continue": true },
-              { "src": "/(gmail-attachments-not-downloading|privacy)\\.html$", "status": 308, "headers": { "location": "/$1" } },
+              { "src": "/(gmail-attachments-not-downloading|download-all-gmail-attachments|download-gmail-attachments-from-sender|privacy)\\.html$", "status": 308, "headers": { "location": "/$1" } },
               { "handle": "filesystem" },
-              { "src": "/(gmail-attachments-not-downloading|privacy)/?$", "dest": "/$1.html" },
+              { "src": "/(gmail-attachments-not-downloading|download-all-gmail-attachments|download-gmail-attachments-from-sender|privacy)/?$", "dest": "/$1.html" },
               { "src": "/.*", "dest": "/index.html" }
             ]
           }

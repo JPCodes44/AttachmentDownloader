@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>How to Download All Attachments from One Sender in Gmail | AttachmentDownloader</title>
+    <meta
+      name="description"
+      content="Find every attachment a person or company sent you in Gmail with from: and has:attachment, then download them all as one ZIP instead of opening each email."
+    />
+    <link rel="canonical" href="https://attachmentdownloader.vercel.app/download-gmail-attachments-from-sender" />
+    <link rel="icon" type="image/svg+xml" href="./public/favicon.svg" />
+    <meta property="og:type" content="article" />
+    <meta property="og:site_name" content="AttachmentDownloader" />
+    <meta property="og:url" content="https://attachmentdownloader.vercel.app/download-gmail-attachments-from-sender" />
+    <meta property="og:title" content="How to download all attachments from one sender in Gmail" />
+    <meta property="og:image" content="https://attachmentdownloader.vercel.app/og.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "HowTo",
+        "name": "How to download all attachments from one sender in Gmail",
+        "description": "Search Gmail for one sender's emails with attachments, then download every file as one ZIP.",
+        "image": "https://attachmentdownloader.vercel.app/og.png",
+        "totalTime": "PT1M",
+        "tool": [{ "@type": "HowToTool", "name": "AttachmentDownloader" }],
+        "step": [
+          { "@type": "HowToStep", "name": "Sign in", "text": "Open attachmentdownloader.vercel.app and sign in with Google, allowing read-only Gmail access." },
+          { "@type": "HowToStep", "name": "Enter the sender", "text": "Type the sender's name, email address or domain in the From box." },
+          { "@type": "HowToStep", "name": "Find attachments", "text": "Click Find attachments to list every file that sender sent you." },
+          { "@type": "HowToStep", "name": "Download", "text": "Click Select all, then Download ZIP." }
+        ]
+      }
+    </script>
+    <link rel="stylesheet" href="./src/styles.css" />
+  </head>
+  <body>
+    <div class="landing">
+      <header class="topbar">
+        <a class="brand" href="/"><span class="brand-mark" aria-hidden="true"></span>AttachmentDownloader</a>
+        <a class="btn primary small" href="/">Download attachments as a ZIP</a>
+      </header>
+
+      <main class="doc">
+        <h1>How to download all attachments from one sender in Gmail</h1>
+        <p class="muted small">Updated October 2026</p>
+        <p>
+          <b>Search Gmail for <code>from:sender@example.com has:attachment</code> to list every email with attachments
+          from that sender.</b> Gmail then makes you open each email to save its files. To get them all at once, run
+          the same search in AttachmentDownloader and download every file as one ZIP.
+        </p>
+
+        <h2>Find a sender's attachments in Gmail</h2>
+        <p>Type one of these into the Gmail search bar:</p>
+        <ul>
+          <li><code>from:anna@example.com has:attachment</code> for one person.</li>
+          <li><code>from:@example.com has:attachment</code> for everyone at a company.</li>
+          <li><code>from:anna@example.com filename:pdf</code> for only their PDFs.</li>
+          <li><code>from:anna@example.com has:attachment after:2026/01/01</code> for this year only.</li>
+        </ul>
+        <p>
+          This shows the emails, but Gmail has no way to download attachments from several emails together. You'd
+          open each one and click <b>Download all</b>.
+        </p>
+
+        <h2>Download them all as one ZIP</h2>
+        <ol>
+          <li><a href="/">Open AttachmentDownloader</a> and sign in with Google. It only gets read-only access to your Gmail.</li>
+          <li>Type the sender's name, email address or domain (such as <code>example.com</code>) in the <b>From</b> box.</li>
+          <li>Optionally pick a date range, a minimum size, or file types like PDFs or images.</li>
+          <li>Click <b>Find attachments</b>, then <b>Select all</b> and <b>Download ZIP</b>.</li>
+        </ol>
+        <p>
+          Duplicate filenames are renamed automatically, so two files called <code>invoice.pdf</code> don't overwrite
+          each other in the ZIP.
+        </p>
+
+        <div class="callout">
+          <p><b>Every attachment from one sender, in one ZIP.</b> Free, read-only, nothing to install.</p>
+          <a class="btn primary" href="/">Find my attachments</a>
+        </div>
+
+        <h2>Common uses</h2>
+        <ul>
+          <li><b>Invoices and receipts</b> from a supplier or service, for your accountant or taxes.</li>
+          <li><b>Photos</b> a family member sent over the years.</li>
+          <li><b>Contracts and documents</b> from a client or lawyer.</li>
+          <li><b>Statements</b> from your bank or utility company.</li>
+        </ul>
+
+        <h2>Questions</h2>
+        <h3>Can I include several senders?</h3>
+        <p>
+          Yes. Edit the Gmail search box in AttachmentDownloader to something like
+          <code>from:(anna@example.com OR ben@example.com)</code>.
+        </p>
+        <h3>Does it include images pasted inside the email?</h3>
+        <p>Only if you turn on <b>Include inline images</b>. By default you get real attachments, not logos and signatures.</p>
+        <h3>What about attachments from everyone?</h3>
+        <p>See <a href="/download-all-gmail-attachments">how to download all attachments from Gmail at once</a>.</p>
+      </main>
+
+      <footer class="landing-footer muted small">
+        <a href="/">AttachmentDownloader</a>
+        <a href="/download-all-gmail-attachments">Download all Gmail attachments</a>
+        <a href="/gmail-attachments-not-downloading">Fix Gmail attachment downloads</a>
+        <a href="/privacy">Privacy</a>
+      </footer>
+    </div>
+  </body>
+</html>

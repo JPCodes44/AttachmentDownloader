@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>How to Download All Attachments from Gmail at Once (4 Ways) | AttachmentDownloader</title>
+    <meta
+      name="description"
+      content="Gmail has no button to download every attachment at once. Here are four ways to do it: one email's Download all, Google Takeout, a Google Apps Script, or a tool that bundles every matching file into one ZIP."
+    />
+    <link rel="canonical" href="https://attachmentdownloader.vercel.app/download-all-gmail-attachments" />
+    <link rel="icon" type="image/svg+xml" href="./public/favicon.svg" />
+    <meta property="og:type" content="article" />
+    <meta property="og:site_name" content="AttachmentDownloader" />
+    <meta property="og:url" content="https://attachmentdownloader.vercel.app/download-all-gmail-attachments" />
+    <meta property="og:title" content="How to download all attachments from Gmail at once" />
+    <meta property="og:image" content="https://attachmentdownloader.vercel.app/og.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "HowTo",
+        "name": "How to download all attachments from Gmail at once",
+        "description": "Search your Gmail for the attachments you want, then download every matching file as one ZIP.",
+        "image": "https://attachmentdownloader.vercel.app/og.png",
+        "totalTime": "PT2M",
+        "tool": [{ "@type": "HowToTool", "name": "AttachmentDownloader" }],
+        "step": [
+          { "@type": "HowToStep", "name": "Sign in", "text": "Open attachmentdownloader.vercel.app and sign in with Google, allowing read-only Gmail access." },
+          { "@type": "HowToStep", "name": "Filter", "text": "Narrow the search by sender, label, date range, minimum size or file type, or type any Gmail search." },
+          { "@type": "HowToStep", "name": "Find attachments", "text": "Click Find attachments. Every match is listed with its sender, subject, date and size." },
+          { "@type": "HowToStep", "name": "Download", "text": "Click Select all, or tick the files you want, then Download ZIP." }
+        ]
+      }
+    </script>
+    <link rel="stylesheet" href="./src/styles.css" />
+  </head>
+  <body>
+    <div class="landing">
+      <header class="topbar">
+        <a class="brand" href="/"><span class="brand-mark" aria-hidden="true"></span>AttachmentDownloader</a>
+        <a class="btn primary small" href="/">Download attachments as a ZIP</a>
+      </header>
+
+      <main class="doc">
+        <h1>How to download all attachments from Gmail at once</h1>
+        <p class="muted small">Updated October 2026</p>
+        <p>
+          <b>Gmail has no button that downloads every attachment in your inbox.</b> It can only zip the attachments of
+          one email at a time. To get the files from many emails at once, use Google Takeout (one big mailbox archive),
+          a Google Apps Script (copies files to Drive), or a tool that searches your inbox and downloads every matching
+          file as one ZIP.
+        </p>
+
+        <h2>Which way should you use?</h2>
+        <ul>
+          <li><b>Files from one email:</b> Gmail's own <b>Download all</b> button (way 1).</li>
+          <li><b>A full backup of everything:</b> Google Takeout (way 2).</li>
+          <li><b>Files kept in Google Drive automatically:</b> an Apps Script (way 3).</li>
+          <li><b>Files from many emails, picked by sender, date or type:</b> AttachmentDownloader (way 4).</li>
+        </ul>
+
+        <h2>1. Download all attachments in one email</h2>
+        <p>
+          Open the email and scroll to the attachments at the bottom. When there are two or more, hover over them and
+          click <b>Download all</b>. Gmail saves them as one ZIP. This only covers that single email.
+        </p>
+
+        <h2>2. Export your whole mailbox with Google Takeout</h2>
+        <ol>
+          <li>Go to <a href="https://takeout.google.com">takeout.google.com</a> and click <b>Deselect all</b>.</li>
+          <li>Tick <b>Mail</b>. To export only some emails, click <b>All Mail data included</b> and pick labels.</li>
+          <li>Click <b>Next step</b>, choose how to receive the export, and click <b>Create export</b>.</li>
+        </ol>
+        <p>
+          Takeout can take hours or days, and you get one large <code>.mbox</code> file, not separate attachments. You
+          then need an email program such as Thunderbird, or a script, to pull the files out.
+        </p>
+
+        <h2>3. Save attachments to Google Drive with Apps Script</h2>
+        <p>
+          A short Google Apps Script can search Gmail and copy each attachment into a Drive folder, and run on a timer.
+          It's free and good for ongoing automation, but you write and maintain the code yourself. Scripts also hit
+          Google's daily time limits on big mailboxes.
+        </p>
+
+        <h2>4. Download every matching attachment as one ZIP</h2>
+        <p>
+          AttachmentDownloader searches your Gmail and lists every attachment that matches, so you can download all of
+          them, or just the ones you pick, in one go.
+        </p>
+        <ol>
+          <li><a href="/">Open AttachmentDownloader</a> and sign in with Google. It asks for read-only access, so it can't send, change or delete email.</li>
+          <li>Narrow the search: sender, label, date range, minimum size or file type (PDFs, images, documents and more). You can also type any Gmail search.</li>
+          <li>Click <b>Find attachments</b>. Each file is listed with its sender, subject, date and size.</li>
+          <li>Click <b>Select all</b>, or tick the files you want, then <b>Download ZIP</b>.</li>
+        </ol>
+        <p>
+          Files download straight from Gmail to your browser, and the ZIP is built on your device. One search covers
+          up to 25,000 emails or 10,000 attachments; narrow it down for bigger mailboxes.
+        </p>
+
+        <div class="callout">
+          <p><b>Get every attachment from your inbox as one ZIP.</b> Free, read-only, nothing to install.</p>
+          <a class="btn primary" href="/">Find my attachments</a>
+        </div>
+
+        <h2>Questions</h2>
+        <h3>Can I download attachments from a specific sender only?</h3>
+        <p>
+          Yes. See <a href="/download-gmail-attachments-from-sender">how to download all attachments from one sender</a>.
+        </p>
+        <h3>Will downloading attachments delete my emails?</h3>
+        <p>No. Downloading only copies files; your emails and attachments stay in Gmail.</p>
+        <h3>Why won't a Gmail attachment download at all?</h3>
+        <p>
+          Usually a blocked file type, a browser extension or a cookie problem. See
+          <a href="/gmail-attachments-not-downloading">8 fixes for Gmail attachments not downloading</a>.
+        </p>
+      </main>
+
+      <footer class="landing-footer muted small">
+        <a href="/">AttachmentDownloader</a>
+        <a href="/download-gmail-attachments-from-sender">Attachments from one sender</a>
+        <a href="/gmail-attachments-not-downloading">Fix Gmail attachment downloads</a>
+        <a href="/privacy">Privacy</a>
+      </footer>
+    </div>
+  </body>
+</html>
