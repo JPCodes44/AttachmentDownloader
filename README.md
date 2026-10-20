@@ -44,26 +44,30 @@ bun run dev              # Convex + web app at http://localhost:3000
 
 ## CI/CD
 
-`.github/workflows/ci.yml` runs on GitHub Actions:
+`.github/workflows/ci.yml` (checks) calls `.github/workflows/deploy.yml` (one deploy, per environment):
 
 | When | What runs |
 |---|---|
 | A PR to `main` is opened or updated | gitleaks secret scan over all history, `bun check`, `bun test`, build |
-| A PR is **merged** into `main` | The same checks, then **deploy to staging** (Convex backend + website) |
-| Manually: Actions → CI/CD → *Run workflow* | Checks, then deploy `main` to staging |
+| A PR is **merged** (any push to `main`) | Checks → **staging** → waits for approval → **production** |
+| Manually: Actions → CI/CD → *Run workflow* on `main` | Same as a merge |
 
-Staging is the `staging` deployment in the Convex project (backend) plus the
-`gmail-attachments-staging` Vercel project (website, static files):
-**https://gmail-attachments-staging.vercel.app**
+**Approving production:** after staging deploys, the run shows *Review deployments*. Check staging, then approve
+`production` and the same commit ships. Production only accepts deploys from `main`.
 
-### One-time staging setup (already done for this repo)
-1. `bunx convex deployment create staging --type prod`
-2. `bun scripts/setup.ts --deployment staging --copy-google-from dev --site-url https://gmail-attachments-staging.vercel.app` sets staging's own auth and encryption keys and reuses dev's Google client.
-3. Add the origin and redirect URI it prints to the Google OAuth client.
-4. `bunx vercel login`, then `bunx vercel project add gmail-attachments-staging` and `bunx vercel link --project gmail-attachments-staging` (the IDs land in the git-ignored `.vercel/project.json`).
-5. GitHub `staging` environment:
-   - secrets: `CONVEX_DEPLOY_KEY` (from `bunx convex deployment token create github-actions-staging --deployment staging`) and `VERCEL_TOKEN` (from https://vercel.com/account/tokens)
-   - variables: `STAGING_URL`, `STAGING_CONVEX_URL`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`
+| Environment | Website | Convex deployment |
+|---|---|---|
+| dev (local) | http://localhost:3000 | your `dev/…` deployment |
+| staging | https://gmail-attachments-staging.vercel.app | `staging` (glorious-leopard-388) |
+| production | https://gmail-attachments.vercel.app | default prod (flippant-jay-368) |
+
+### Setting up an environment (already done for staging and production)
+1. Convex deployment: `bunx convex deployment create <name> --type prod`. Production uses the project's default prod deployment.
+2. `bun scripts/setup.ts --deployment <name|prod> --copy-google-from dev --site-url https://<site>.vercel.app`, then add the origin and redirect URI it prints to the Google OAuth client.
+3. Vercel: `bunx vercel project add <project>` and `bunx vercel link --project <project>` (IDs land in the git-ignored `.vercel/project.json`).
+4. GitHub environment with the same name:
+   - secrets: `CONVEX_DEPLOY_KEY` (`bunx convex deployment token create github-actions-<env> --deployment <name|prod>`) and `VERCEL_TOKEN` (https://vercel.com/account/tokens)
+   - variables: `CONVEX_URL`, `SITE_URL`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`
 
 ## Scripts
 | Command | What it does |
