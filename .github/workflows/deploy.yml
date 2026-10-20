@@ -51,7 +51,7 @@ jobs:
         env:
           VITE_CONVEX_URL: ${{ vars.CONVEX_URL }}
 
-      - name: Package for Vercel (static files + single-page-app fallback)
+      - name: Package for Vercel (static files, clean page URLs, single-page-app fallback)
         run: |
           mkdir -p .vercel/output/static
           cp -r dist/. .vercel/output/static/
@@ -66,12 +66,19 @@ jobs:
                 "referrer-policy": "strict-origin-when-cross-origin",
                 "permissions-policy": "camera=(), microphone=(), geolocation=()"
               }, "continue": true },
-              { "src": "/index-[^/]+\\.(js|css)$", "headers": { "cache-control": "public, max-age=31536000, immutable" }, "continue": true },
+              { "src": "/[^/]+-[a-z0-9]{8}\\.(js|css|svg)$", "headers": { "cache-control": "public, max-age=31536000, immutable" }, "continue": true },
+              { "src": "/(gmail-attachments-not-downloading|privacy)\\.html$", "status": 308, "headers": { "location": "/$1" } },
               { "handle": "filesystem" },
+              { "src": "/(gmail-attachments-not-downloading|privacy)/?$", "dest": "/$1.html" },
               { "src": "/.*", "dest": "/index.html" }
             ]
           }
           JSON
+          # Only production may be indexed; otherwise staging competes with it in search results.
+          if [ "${{ inputs.environment }}" != production ]; then
+            jq '.routes |= [{ "src": "/.*", "headers": { "x-robots-tag": "noindex" }, "continue": true }] + .' \
+              .vercel/output/config.json > config.tmp && mv config.tmp .vercel/output/config.json
+          fi
 
       - name: Deploy website to Vercel
         run: bunx vercel@62.2.0 deploy --prebuilt --prod --yes --token "$VERCEL_TOKEN"
