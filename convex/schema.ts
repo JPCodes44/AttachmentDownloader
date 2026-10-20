@@ -30,8 +30,14 @@ export default defineSchema({
     attachmentsFound: v.number(),
     inlineFound: v.number(),
     error: v.optional(v.string()),
+    // Stopped early at MAX_MESSAGES_PER_SCAN or MAX_ATTACHMENTS_PER_SCAN.
+    limitReached: v.optional(v.boolean()),
     createdAt: v.number(),
-  }).index("by_user", ["userId"]),
+    // Last progress; the stale-scan cron fails running scans that stop moving.
+    updatedAt: v.optional(v.number()),
+  })
+    .index("by_user", ["userId"])
+    .index("by_status_and_updatedAt", ["status", "updatedAt"]),
 
   // Metadata only. Bytes are downloaded by the browser straight from Gmail.
   attachments: defineTable({

@@ -10,6 +10,8 @@ import {
   refreshAccessToken,
   revokeToken,
 } from "./gmailApi";
+import { rateLimiter } from "./limits";
+import { deleteScans } from "./scans";
 
 // System labels that work as `label:<id>` in Gmail search.
 const SEARCHABLE_SYSTEM_LABELS = new Set(["INBOX", "SENT", "STARRED", "IMPORTANT"]);
@@ -49,6 +51,7 @@ export const markExpired = internalMutation({
   },
 });
 
+// Disconnecting also deletes scan results: they are Gmail data too.
 export const deleteAccount = internalMutation({
   args: { userId: v.id("users") },
   handler: async (ctx, { userId }) => {
@@ -57,6 +60,7 @@ export const deleteAccount = internalMutation({
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .unique();
     if (account) await ctx.db.delete(account._id);
+    await deleteScans(ctx, userId);
   },
 });
 
@@ -79,23 +83,42 @@ export async function accessTokenForUser(ctx: ActionCtx, userId: Id<"users">): P
   }
 }
 
-async function requireUser(ctx: ActionCtx) {
+export async function requireUser(ctx: ActionCtx) {
   const userId = await getAuthUserId(ctx);
   if (!userId) throw new ConvexError("Sign in first");
   return userId;
+}
+
+// Each call refreshes a token at Google, so cap how often a user can ask.
+async function limitedAccessToken(ctx: ActionCtx): Promise<AccessToken> {
+  const userId = await requireUser(ctx);
+  const { ok } = await rateLimiter.limit(ctx, "gmailToken", { key: userId });
+  if (!ok) throw new ConvexError("Too many requests. Wait a minute and try again.");
+  return accessTokenForUser(ctx, userId);
+}
+
+// Revokes the stored Gmail grant at Google, ignoring failures: deleting the row is what matters.
+export async function revokeStoredToken(ctx: ActionCtx, userId: Id<"users">) {
+  const account = await ctx.runQuery(internal.gmail.getAccount, { userId });
+  if (!account) return;
+  try {
+    await revokeToken(await decrypt(account.encryptedRefreshToken));
+  } catch {
+    // Already revoked or undecryptable.
+  }
 }
 
 // A short-lived (1 hour) read-only token so the browser can download file bytes
 // straight from Gmail. The refresh token itself never leaves Convex.
 export const getAccessToken = action({
   args: {},
-  handler: async (ctx): Promise<AccessToken> => accessTokenForUser(ctx, await requireUser(ctx)),
+  handler: (ctx): Promise<AccessToken> => limitedAccessToken(ctx),
 });
 
 export const listLabels = action({
   args: {},
   handler: async (ctx): Promise<{ id: string; name: string; system: boolean }[]> => {
-    const { accessToken } = await accessTokenForUser(ctx, await requireUser(ctx));
+    const { accessToken } = await limitedAccessToken(ctx);
     const { labels = [] } = await fetchLabels(accessToken);
     return labels
       .filter((l) => l.type !== "system" || SEARCHABLE_SYSTEM_LABELS.has(l.id))
@@ -108,13 +131,7 @@ export const disconnect = action({
   args: {},
   handler: async (ctx): Promise<void> => {
     const userId = await requireUser(ctx);
-    const account = await ctx.runQuery(internal.gmail.getAccount, { userId });
-    if (!account) return;
-    try {
-      await revokeToken(await decrypt(account.encryptedRefreshToken));
-    } catch {
-      // Already revoked or undecryptable: deleting the row is what matters.
-    }
+    await revokeStoredToken(ctx, userId);
     await ctx.runMutation(internal.gmail.deleteAccount, { userId });
   },
 });

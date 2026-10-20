@@ -1,19 +1,28 @@
-import { beforeEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, jest, test } from "bun:test";
 import { convexTest } from "convex-test";
 import { api, internal } from "../convex/_generated/api";
 import { upsertGoogleUser } from "../convex/auth";
 import type { Id } from "../convex/_generated/dataModel";
 import schema from "../convex/schema";
-import { modules } from "./modules";
+import { MAX_ATTACHMENTS_PER_SCAN, MAX_MESSAGES_PER_SCAN } from "../convex/limits";
+import { STALE_AFTER_MS } from "../convex/scans";
+import { modules, registerComponents } from "./modules";
 
 beforeEach(() => {
   process.env.AUTH_GOOGLE_ID = "client-id";
   process.env.AUTH_GOOGLE_SECRET = "client-secret";
   process.env.CONVEX_SITE_URL = "https://example.convex.site";
+  // Scheduled functions (scanPage, cleanup) only run when a test asks, never on a racing timer.
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
 });
 
 async function setup() {
   const t = convexTest(schema, modules);
+  await registerComponents(t);
   const userId = await t.run((ctx) => ctx.db.insert("users", { email: "me@example.com" }));
   const sessionId = await t.run((ctx) =>
     ctx.db.insert("authSessions", { userId, expirationTime: Date.now() + 60_000 }),
@@ -71,13 +80,13 @@ describe("Google sign-in", () => {
     expect(account).toMatchObject({ email: "new@gmail.com", encryptedRefreshToken: "iv.cipher", status: "active" });
   });
 
-  test("signing in again links by email and replaces an expired connection", async () => {
+  test("signing in again replaces an expired connection", async () => {
     const { t, userId } = await setup();
     await connect(t, userId);
     await t.mutation(internal.gmail.markExpired, { userId });
     const id = await t.run((ctx) =>
       upsertGoogleUser(ctx, {
-        existingUserId: null,
+        existingUserId: userId,
         profile: { email: "me@example.com", encryptedGmailToken: "new.token" },
       }),
     );
@@ -85,6 +94,19 @@ describe("Google sign-in", () => {
     const accounts = await t.run((ctx) => ctx.db.query("gmailAccounts").collect());
     expect(accounts).toHaveLength(1);
     expect(accounts[0]).toMatchObject({ encryptedRefreshToken: "new.token", status: "active" });
+  });
+
+  test("a different Google account with the same email gets its own user, not the existing Gmail", async () => {
+    const { t, userId } = await setup();
+    await connect(t, userId);
+    const id = await t.run((ctx) =>
+      upsertGoogleUser(ctx, { existingUserId: null, profile: { email: "me@example.com" } }),
+    );
+    expect(id).not.toBe(userId);
+    const theirs = await t.run((ctx) =>
+      ctx.db.query("gmailAccounts").withIndex("by_user", (q) => q.eq("userId", id)).unique(),
+    );
+    expect(theirs).toBeNull();
   });
 
   test("unticking Gmail on a later sign-in keeps the existing connection", async () => {
@@ -175,5 +197,141 @@ describe("scans", () => {
     await t.mutation(internal.scans.cleanup, { scanId: first });
     expect(await t.run((ctx) => ctx.db.get(first))).toBeNull();
     expect((await asUser.query(api.scans.latest, {}))?._id).toBe(second);
+  });
+
+  const runningScan = (t: ReturnType<typeof convexTest>, userId: Id<"users">, fields = {}) =>
+    t.run((ctx) =>
+      ctx.db.insert("scans", {
+        userId,
+        query: "has:attachment",
+        extensions: [],
+        status: "running",
+        messagesScanned: 0,
+        attachmentsFound: 0,
+        inlineFound: 0,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        ...fields,
+      }),
+    );
+
+  test("an OR in the search can't escape the attachment filter", async () => {
+    const { t, userId, asUser } = await setup();
+    await connect(t, userId);
+    const scanId = await asUser.mutation(api.scans.start, { query: "x OR in:anywhere", extensions: [] });
+    expect((await asUser.query(api.scans.get, { scanId })).query).toBe("(x OR in:anywhere) has:attachment");
+  });
+
+  test("oversized searches are rejected", async () => {
+    const { t, userId, asUser } = await setup();
+    await connect(t, userId);
+    await expect(asUser.mutation(api.scans.start, { query: "a".repeat(1001), extensions: [] })).rejects.toThrow(
+      "too long",
+    );
+    await expect(
+      asUser.mutation(api.scans.start, { query: "", extensions: Array.from({ length: 51 }, (_, i) => `e${i}`) }),
+    ).rejects.toThrow("Too many file types");
+  });
+
+  test("starting scans is rate limited per user", async () => {
+    const { t, userId, asUser } = await setup();
+    await connect(t, userId);
+    for (let i = 0; i < 5; i++) await asUser.mutation(api.scans.start, { query: "", extensions: [] });
+    await expect(asUser.mutation(api.scans.start, { query: "", extensions: [] })).rejects.toThrow("Too many searches");
+  });
+
+  test("a scan stops at the message limit", async () => {
+    const { t, userId } = await setup();
+    const scanId = await runningScan(t, userId, { messagesScanned: MAX_MESSAGES_PER_SCAN - 50 });
+    await t.mutation(internal.scans.recordPage, {
+      scanId,
+      attachments: [attachment(1)],
+      messagesScanned: 100,
+      nextPageToken: "more",
+    });
+    expect(await t.run((ctx) => ctx.db.get(scanId))).toMatchObject({ status: "done", limitReached: true });
+  });
+
+  test("a scan stores no more than the attachment limit", async () => {
+    const { t, userId } = await setup();
+    const scanId = await runningScan(t, userId, { attachmentsFound: MAX_ATTACHMENTS_PER_SCAN - 1 });
+    await t.mutation(internal.scans.recordPage, {
+      scanId,
+      attachments: [attachment(1), attachment(2), attachment(3)],
+      messagesScanned: 3,
+      nextPageToken: "more",
+    });
+    const rows = await t.run((ctx) => ctx.db.query("attachments").collect());
+    expect(rows).toHaveLength(1);
+    expect(await t.run((ctx) => ctx.db.get(scanId))).toMatchObject({
+      status: "done",
+      limitReached: true,
+      attachmentsFound: MAX_ATTACHMENTS_PER_SCAN,
+    });
+  });
+
+  test("scans that stop making progress are failed, live ones are left alone", async () => {
+    const { t, userId } = await setup();
+    const stale = await runningScan(t, userId, { updatedAt: Date.now() - STALE_AFTER_MS - 1000 });
+    const legacy = await runningScan(t, userId, { updatedAt: undefined });
+    const live = await runningScan(t, userId);
+    await t.mutation(internal.scans.failStaleScans, {});
+    const status = async (id: Id<"scans">) => (await t.run((ctx) => ctx.db.get(id)))?.status;
+    expect(await status(stale)).toBe("error");
+    expect(await status(legacy)).toBe("error");
+    expect(await status(live)).toBe("running");
+  });
+});
+
+describe("deleting data", () => {
+  test("disconnecting Gmail deletes the scan results too", async () => {
+    const { t, userId } = await setup();
+    await connect(t, userId);
+    const scanId = await t.run((ctx) =>
+      ctx.db.insert("scans", {
+        userId,
+        query: "has:attachment",
+        extensions: [],
+        status: "done",
+        messagesScanned: 1,
+        attachmentsFound: 1,
+        inlineFound: 0,
+        createdAt: Date.now(),
+      }),
+    );
+    await t.run((ctx) =>
+      ctx.db.insert("attachments", {
+        scanId,
+        userId,
+        messageId: "m",
+        attachmentId: "a",
+        filename: "f.pdf",
+        mimeType: "application/pdf",
+        size: 1,
+        from: "a@b.c",
+        subject: "s",
+        date: 1,
+        isInline: false,
+      }),
+    );
+    await t.mutation(internal.gmail.deleteAccount, { userId });
+    await t.finishAllScheduledFunctions(jest.runAllTimers);
+    expect(await t.run((ctx) => ctx.db.query("gmailAccounts").collect())).toHaveLength(0);
+    expect(await t.run((ctx) => ctx.db.query("scans").collect())).toHaveLength(0);
+    expect(await t.run((ctx) => ctx.db.query("attachments").collect())).toHaveLength(0);
+  });
+
+  test("deleting an account removes the user, sessions, sign-in accounts and Gmail data", async () => {
+    const { t, userId } = await setup();
+    await connect(t, userId);
+    await t.run((ctx) =>
+      ctx.db.insert("authAccounts", { userId, provider: "google", providerAccountId: "sub-1" }),
+    );
+    await t.mutation(internal.account.deleteUserData, { userId });
+    await t.finishAllScheduledFunctions(jest.runAllTimers);
+    expect(await t.run((ctx) => ctx.db.get(userId))).toBeNull();
+    for (const table of ["authAccounts", "authSessions", "gmailAccounts", "scans"] as const) {
+      expect(await t.run((ctx) => ctx.db.query(table).collect())).toHaveLength(0);
+    }
   });
 });

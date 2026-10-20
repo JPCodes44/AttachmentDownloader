@@ -59,6 +59,13 @@ jobs:
           {
             "version": 3,
             "routes": [
+              { "src": "/.*", "headers": {
+                "content-security-policy": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.convex.cloud wss://*.convex.cloud https://*.convex.site https://gmail.googleapis.com; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'",
+                "x-frame-options": "DENY",
+                "x-content-type-options": "nosniff",
+                "referrer-policy": "strict-origin-when-cross-origin",
+                "permissions-policy": "camera=(), microphone=(), geolocation=()"
+              }, "continue": true },
               { "src": "/[^/]+-[a-z0-9]{8}\\.(js|css|svg)$", "headers": { "cache-control": "public, max-age=31536000, immutable" }, "continue": true },
               { "src": "/(gmail-attachments-not-downloading|privacy)\\.html$", "status": 308, "headers": { "location": "/$1" } },
               { "handle": "filesystem" },
