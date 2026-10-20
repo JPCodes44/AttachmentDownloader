@@ -52,15 +52,18 @@ bun run dev              # Convex + web app at http://localhost:3000
 | A PR is **merged** into `main` | The same checks, then **deploy to staging** (Convex backend + website) |
 | Manually: Actions → CI/CD → *Run workflow* | Checks, then deploy `main` to staging |
 
-Staging is the `staging` deployment in the Convex project, and the website is served from it by
-[`@convex-dev/static-hosting`](https://www.npmjs.com/package/@convex-dev/static-hosting):
-**https://glorious-leopard-388.convex.site**
+Staging is the `staging` deployment in the Convex project (backend) plus the
+`gmail-attachments-staging` Vercel project (website, static files):
+**https://gmail-attachments-staging.vercel.app**
 
 ### One-time staging setup (already done for this repo)
 1. `bunx convex deployment create staging --type prod`
-2. `bun scripts/setup.ts --deployment staging --copy-google-from dev` sets staging's own auth and encryption keys and reuses dev's Google client.
-3. Add the origin and redirect URIs it prints to the Google OAuth client.
-4. GitHub: create a `staging` environment with secret `CONVEX_DEPLOY_KEY` (from `bunx convex deployment token create github-actions-staging --deployment staging`) and variable `STAGING_URL`.
+2. `bun scripts/setup.ts --deployment staging --copy-google-from dev --site-url https://gmail-attachments-staging.vercel.app` sets staging's own auth and encryption keys and reuses dev's Google client.
+3. Add the origin and redirect URI it prints to the Google OAuth client.
+4. `bunx vercel login`, then `bunx vercel project add gmail-attachments-staging` and `bunx vercel link --project gmail-attachments-staging` (the IDs land in the git-ignored `.vercel/project.json`).
+5. GitHub `staging` environment:
+   - secrets: `CONVEX_DEPLOY_KEY` (from `bunx convex deployment token create github-actions-staging --deployment staging`) and `VERCEL_TOKEN` (from https://vercel.com/account/tokens)
+   - variables: `STAGING_URL`, `STAGING_CONVEX_URL`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`
 
 ## Scripts
 | Command | What it does |

@@ -65,18 +65,42 @@ jobs:
 
       - run: bun install --frozen-lockfile
 
-      - name: Check the deploy key is configured
+      - name: Check staging secrets are configured
         run: |
-          if [ -z "$CONVEX_DEPLOY_KEY" ]; then
-            echo "::error::Add a CONVEX_DEPLOY_KEY secret to the 'staging' environment (see README)."
+          if [ -z "$CONVEX_DEPLOY_KEY" ] || [ -z "${{ secrets.VERCEL_TOKEN }}" ]; then
+            echo "::error::Add CONVEX_DEPLOY_KEY and VERCEL_TOKEN secrets to the 'staging' environment (see README)."
             exit 1
           fi
 
       - name: Deploy Convex backend
         run: bunx convex deploy --typecheck=disable
 
-      - name: Build and upload the website
-        run: bunx static-hosting upload --build-command "bun run build"
+      - name: Build the website
+        run: bun run build
+        env:
+          VITE_CONVEX_URL: ${{ vars.STAGING_CONVEX_URL }}
+
+      - name: Package for Vercel (static files + single-page-app fallback)
+        run: |
+          mkdir -p .vercel/output/static
+          cp -r dist/. .vercel/output/static/
+          cat > .vercel/output/config.json <<'JSON'
+          {
+            "version": 3,
+            "routes": [
+              { "src": "/index-[^/]+\\.(js|css)$", "headers": { "cache-control": "public, max-age=31536000, immutable" }, "continue": true },
+              { "handle": "filesystem" },
+              { "src": "/.*", "dest": "/index.html" }
+            ]
+          }
+          JSON
+
+      - name: Deploy website to Vercel
+        run: bunx vercel@62.2.0 deploy --prebuilt --prod --yes --token "$VERCEL_TOKEN"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
 
       - name: Summary
         run: echo "Staging is live at ${{ vars.STAGING_URL }}" >> "$GITHUB_STEP_SUMMARY"
