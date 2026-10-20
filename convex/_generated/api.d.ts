@@ -11,6 +11,9 @@
 import type * as account from "../account.js";
 import type * as attachments from "../attachments.js";
 import type * as auth from "../auth.js";
+import type * as chat from "../chat.js";
+import type * as chatApi from "../chatApi.js";
+import type * as chatParts from "../chatParts.js";
 import type * as crons from "../crons.js";
 import type * as crypto from "../crypto.js";
 import type * as gmail from "../gmail.js";
@@ -30,6 +33,9 @@ declare const fullApi: ApiFromModules<{
   account: typeof account;
   attachments: typeof attachments;
   auth: typeof auth;
+  chat: typeof chat;
+  chatApi: typeof chatApi;
+  chatParts: typeof chatParts;
   crons: typeof crons;
   crypto: typeof crypto;
   gmail: typeof gmail;

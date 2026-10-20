@@ -3,6 +3,7 @@ import { ConvexError, v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { action, type ActionCtx, internalMutation, internalQuery, query } from "./_generated/server";
+import { CHAT_SCOPES, chatEnabled, DRIVE_SCOPE } from "./chatApi";
 import { decrypt } from "./crypto";
 import {
   GmailExpiredError,
@@ -12,6 +13,10 @@ import {
 } from "./gmailApi";
 import { rateLimiter } from "./limits";
 import { deleteScans } from "./scans";
+
+export function hasChatScopes(scopes: string[] | undefined): boolean {
+  return CHAT_SCOPES.every((s) => scopes?.includes(s));
+}
 
 // System labels that work as `label:<id>` in Gmail search.
 const SEARCHABLE_SYSTEM_LABELS = new Set(["INBOX", "SENT", "STARRED", "IMPORTANT"]);
@@ -27,7 +32,13 @@ export const status = query({
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .unique();
     if (!account) return { connected: false as const };
-    return { connected: true as const, email: account.email, status: account.status };
+    return {
+      connected: true as const,
+      email: account.email,
+      status: account.status,
+      chatConnected: chatEnabled() && hasChatScopes(account.scopes),
+      driveConnected: !!account.scopes?.includes(DRIVE_SCOPE),
+    };
   },
 });
 
@@ -90,7 +101,7 @@ export async function requireUser(ctx: ActionCtx) {
 }
 
 // Each call refreshes a token at Google, so cap how often a user can ask.
-async function limitedAccessToken(ctx: ActionCtx): Promise<AccessToken> {
+export async function limitedAccessToken(ctx: ActionCtx): Promise<AccessToken> {
   const userId = await requireUser(ctx);
   const { ok } = await rateLimiter.limit(ctx, "gmailToken", { key: userId });
   if (!ok) throw new ConvexError("Too many requests. Wait a minute and try again.");

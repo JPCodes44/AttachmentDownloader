@@ -1,4 +1,5 @@
 // Turns the quick filters into a Gmail search string (the same syntax as Gmail's search box).
+import { chatFilter } from "../../convex/chatParts";
 
 export const FILE_TYPES = {
   pdf: { label: "PDF", extensions: ["pdf"] },
@@ -53,3 +54,19 @@ export function buildQuery(f: Filters): string {
   parts.push("has:attachment");
   return parts.join(" ");
 }
+
+// Local midnight at the start of a YYYY-MM-DD day.
+const startOfDay = (iso: string) => new Date(`${iso}T00:00:00`).getTime();
+
+// Google Chat can only filter by date. Like Gmail, "before" excludes that day.
+export function buildChatFilter(f: Pick<Filters, "after" | "before">): string {
+  return chatFilter(f.after ? startOfDay(f.after) : undefined, f.before ? startOfDay(f.before) : undefined);
+}
+
+export const CHAT_TYPES = {
+  DIRECT_MESSAGE: "Direct messages",
+  GROUP_CHAT: "Group chats",
+  SPACE: "Spaces",
+} as const;
+
+export type ChatType = keyof typeof CHAT_TYPES;

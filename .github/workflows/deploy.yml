@@ -60,7 +60,7 @@ jobs:
             "version": 3,
             "routes": [
               { "src": "/.*", "headers": {
-                "content-security-policy": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.convex.cloud wss://*.convex.cloud https://*.convex.site https://gmail.googleapis.com; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'",
+                "content-security-policy": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.convex.cloud wss://*.convex.cloud https://*.convex.site https://gmail.googleapis.com https://chat.googleapis.com https://www.googleapis.com; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'",
                 "x-frame-options": "DENY",
                 "x-content-type-options": "nosniff",
                 "referrer-policy": "strict-origin-when-cross-origin",

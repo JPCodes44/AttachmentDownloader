@@ -80,11 +80,24 @@ export async function revokeToken(token: string): Promise<void> {
 // Gmail's per-user quota errors come back as 403 with one of these reasons.
 const RATE_LIMIT_REASONS = /"(rateLimitExceeded|userRateLimitExceeded)"/;
 
-export class GmailNotFoundError extends Error {}
+// A Google API call that failed for good (not retryable, or out of retries).
+export class GoogleApiError extends Error {
+  constructor(
+    readonly status: number,
+    message: string,
+  ) {
+    super(message);
+  }
+}
 
-// GET a Gmail endpoint, retrying network errors, rate limits and server errors with backoff.
-export async function gmailGet<T>(accessToken: string, path: string, params: Record<string, string> = {}): Promise<T> {
-  const url = new URL(GMAIL + path);
+// GET a Google REST endpoint, retrying network errors, rate limits and server errors with backoff.
+export async function googleGet<T>(
+  api: { name: string; base: string },
+  accessToken: string,
+  path: string,
+  params: Record<string, string> = {},
+): Promise<T> {
+  const url = new URL(api.base + path);
   for (const [k, val] of Object.entries(params)) url.searchParams.set(k, val);
   for (let attempt = 0; ; attempt++) {
     const res = await fetchRetrying(url, { headers: { Authorization: `Bearer ${accessToken}` } }, attempt);
@@ -94,13 +107,17 @@ export async function gmailGet<T>(accessToken: string, path: string, params: Rec
     }
     if (res.ok) return (await res.json()) as T;
     const text = await res.text();
-    if (res.status === 404) throw new GmailNotFoundError(`Gmail API ${path} not found`);
+    if (res.status === 404) throw new GoogleApiError(404, `${api.name} API ${path} not found`);
     const retryable = res.status === 429 || res.status >= 500 || (res.status === 403 && RATE_LIMIT_REASONS.test(text));
     if (!retryable || attempt >= MAX_ATTEMPTS - 1) {
-      throw new Error(`Gmail API ${path} failed with ${res.status}: ${text}`);
+      throw new GoogleApiError(res.status, `${api.name} API ${path} failed with ${res.status}: ${text}`);
     }
     await backoff(attempt);
   }
+}
+
+export function gmailGet<T>(accessToken: string, path: string, params: Record<string, string> = {}): Promise<T> {
+  return googleGet<T>({ name: "Gmail", base: GMAIL }, accessToken, path, params);
 }
 
 export type MessageList = { messages?: { id: string }[]; nextPageToken?: string };
@@ -121,7 +138,7 @@ export async function getMessage(accessToken: string, id: string): Promise<Gmail
       fields: "id,internalDate,payload",
     });
   } catch (err) {
-    if (err instanceof GmailNotFoundError) return null;
+    if (err instanceof GoogleApiError && err.status === 404) return null;
     throw err;
   }
 }

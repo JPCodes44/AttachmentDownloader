@@ -1,3 +1,8 @@
+// Chat attachments have no known size and are stored as 0.
+export function formatSize(n: number): string {
+  return n > 0 ? formatBytes(n) : "—";
+}
+
 export function formatBytes(n: number): string {
   if (n < 1024) return `${n} B`;
   const units = ["KB", "MB", "GB"];

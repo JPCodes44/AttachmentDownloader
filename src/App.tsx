@@ -21,7 +21,7 @@ function SignedIn() {
   const { signOut } = useAuthActions();
 
   const confirmDelete = async () => {
-    if (!confirm("Delete your account? This revokes Gmail access and deletes your search results.")) return;
+    if (!confirm("Delete your account? This revokes Google access and deletes your search results.")) return;
     await deleteAccount();
     await signOut().catch(() => {}); // the session is already gone server-side
   };
@@ -38,7 +38,7 @@ function SignedIn() {
             <>
               <span className="muted small">{gmail.email}</span>
               <button className="btn ghost small" onClick={() => void disconnect()}>
-                Disconnect Gmail
+                {gmail.chatConnected ? "Disconnect Google" : "Disconnect Gmail"}
               </button>
             </>
           )}
@@ -59,7 +59,7 @@ function SignedIn() {
         ) : gmail.status === "expired" ? (
           <ConnectGmail expiredEmail={gmail.email} />
         ) : (
-          <Extractor />
+          <Extractor chatConnected={gmail.chatConnected} driveConnected={gmail.driveConnected} />
         )}
       </main>
     </div>

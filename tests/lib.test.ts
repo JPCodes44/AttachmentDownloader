@@ -4,7 +4,17 @@ import { getMessage, gmailGet, mapLimit } from "../convex/gmailApi";
 import { matchesExtensions, withAttachmentFilter } from "../convex/scans";
 import { base64UrlToBytes } from "../src/lib/download";
 import { sanitizeFilename, uniqueFilenames } from "../src/lib/filenames";
-import { buildQuery, EMPTY_FILTERS } from "../src/lib/gmailQuery";
+import { buildChatFilter, buildQuery, EMPTY_FILTERS } from "../src/lib/gmailQuery";
+
+describe("buildChatFilter", () => {
+  test("turns the date range into createTime bounds at local midnight", () => {
+    expect(buildChatFilter({ after: "", before: "" })).toBe("");
+    const midnight = (d: string) => new Date(`${d}T00:00:00`).toISOString();
+    expect(buildChatFilter({ after: "2026-01-01", before: "2026-02-01" })).toBe(
+      `createTime > "${midnight("2026-01-01")}" AND createTime < "${midnight("2026-02-01")}"`,
+    );
+  });
+});
 
 describe("buildQuery", () => {
   test("empty filters still require attachments", () => {
@@ -138,5 +148,19 @@ describe("Gmail API retries", () => {
     const calls = script(new Response('{"error":{"errors":[{"reason":"insufficientPermissions"}]}}', { status: 403 }));
     await expect(gmailGet("token", "/labels")).rejects.toThrow("403");
     expect(calls).toHaveLength(1);
+  });
+});
+
+describe("filename hardening", () => {
+  test("strips direction marks and avoids Windows reserved names", () => {
+    expect(sanitizeFilename("invoice‮fdp.exe")).toBe("invoicefdp.exe");
+    expect(sanitizeFilename("con.txt")).toBe("_con.txt");
+    expect(sanitizeFilename("NUL")).toBe("_NUL");
+    expect(sanitizeFilename("console.txt")).toBe("console.txt");
+  });
+
+  test("truncation never leaves a trailing dot, and reserved names stay unique", () => {
+    expect(sanitizeFilename(`${"a".repeat(199)}.b`)).toBe("a".repeat(199));
+    expect(uniqueFilenames(["_failed-downloads.txt"], ["_failed-downloads.txt"])).toEqual(["_failed-downloads (2).txt"]);
   });
 });

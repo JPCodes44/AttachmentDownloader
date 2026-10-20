@@ -1,7 +1,9 @@
-import Google from "@auth/core/providers/google";
+import Google, { type GoogleProfile } from "@auth/core/providers/google";
+import type { TokenSet } from "@auth/core/types";
 import { convexAuth } from "@convex-dev/auth/server";
 import type { Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
+import { CHAT_SCOPES, chatEnabled, DRIVE_SCOPE } from "./chatApi";
 import { encrypt } from "./crypto";
 import { GMAIL_SCOPE } from "./gmailApi";
 
@@ -12,36 +14,64 @@ export type GoogleSignInProfile = {
   name?: string;
   image?: string;
   encryptedGmailToken?: string;
+  // Google's account id, used to find the user when Chat is connected (see upsertGoogleUser).
+  googleSub?: string;
+  // Every scope the token carries, Gmail and Chat included.
+  scopes?: string[];
 };
+
+// Both providers sign in to the same Google account; only the requested scopes differ.
+const GOOGLE_PROVIDERS = ["google", "google-chat"];
+
+const offlineAccess = { access_type: "offline", prompt: "consent", include_granted_scopes: "true" };
+
+async function googleProfile(google: GoogleProfile, tokens: TokenSet) {
+  // Google lets people untick boxes, so check what was granted.
+  const scopes = tokens.scope?.split(" ") ?? [];
+  const granted = scopes.includes(GMAIL_SCOPE) || CHAT_SCOPES.some((s) => scopes.includes(s));
+  if (google.email_verified !== true) throw new Error("Google account email is not verified");
+  return {
+    id: google.sub,
+    googleSub: google.sub,
+    email: google.email,
+    name: google.name,
+    image: google.picture,
+    ...(granted && tokens.refresh_token
+      ? { encryptedGmailToken: await encrypt(tokens.refresh_token), scopes }
+      : {}),
+  };
+}
+
+// "Connect Google Chat": the same Google client asking for Chat (and Drive, for files
+// shared into chats from Drive) on top of Gmail. include_granted_scopes makes the
+// new refresh token cover all of them.
+function googleChatProvider() {
+  return Google({
+    id: "google-chat",
+    // Auth.js would otherwise look for AUTH_GOOGLE_CHAT_ID.
+    clientId: process.env.AUTH_GOOGLE_ID,
+    clientSecret: process.env.AUTH_GOOGLE_SECRET,
+    authorization: {
+      params: {
+        scope: `openid email profile ${GMAIL_SCOPE} ${CHAT_SCOPES.join(" ")} ${DRIVE_SCOPE}`,
+        ...offlineAccess,
+      },
+    },
+    profile: googleProfile,
+  });
+}
 
 export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
   providers: [
     Google({
       // One consent screen: sign in AND read-only Gmail access, with a refresh
       // token (offline + consent) so scans keep working after the hour is up.
-      authorization: {
-        params: {
-          scope: `openid email profile ${GMAIL_SCOPE}`,
-          access_type: "offline",
-          prompt: "consent",
-          include_granted_scopes: "true",
-        },
-      },
-      async profile(google, tokens) {
-        // Google lets people untick the Gmail box, so check what was granted.
-        const grantedGmail = tokens.scope?.split(" ").includes(GMAIL_SCOPE) ?? false;
-        if (google.email_verified !== true) throw new Error("Google account email is not verified");
-        return {
-          id: google.sub,
-          email: google.email,
-          name: google.name,
-          image: google.picture,
-          ...(grantedGmail && tokens.refresh_token
-            ? { encryptedGmailToken: await encrypt(tokens.refresh_token) }
-            : {}),
-        };
-      },
+      authorization: { params: { scope: `openid email profile ${GMAIL_SCOPE}`, ...offlineAccess } },
+      profile: googleProfile,
     }),
+    // Only registered when enabled, so nobody can ask Google for scopes the
+    // consent screen doesn't list yet.
+    ...(chatEnabled() ? [googleChatProvider()] : []),
   ],
   callbacks: {
     createOrUpdateUser: (ctx, args) =>
@@ -58,12 +88,15 @@ export async function upsertGoogleUser(
   ctx: MutationCtx,
   { existingUserId, profile }: { existingUserId: Id<"users"> | null; profile: GoogleSignInProfile },
 ): Promise<Id<"users">> {
-  const { encryptedGmailToken, ...user } = profile;
+  const { encryptedGmailToken, googleSub, scopes, ...user } = profile;
   const fields = { ...user, emailVerificationTime: Date.now() };
 
   // existingUserId comes from the Google account id (sub). Never link by email:
   // a different Google account can end up with the same address (recreated
   // Workspace user, re-registered domain) and must not inherit this user's Gmail.
+  // Each provider has its own authAccounts row, so the first sign-in through the
+  // other one finds no existingUserId: link it by the same sub instead.
+  existingUserId ??= googleSub ? await userForGoogleSub(ctx, googleSub) : null;
   let id: Id<"users">;
   if (existingUserId) {
     await ctx.db.patch(existingUserId, fields);
@@ -84,9 +117,21 @@ export async function upsertGoogleUser(
       encryptedRefreshToken: encryptedGmailToken,
       status: "active" as const,
       connectedAt: Date.now(),
+      ...(scopes ? { scopes } : {}),
     };
     if (existing) await ctx.db.replace(existing._id, account);
     else await ctx.db.insert("gmailAccounts", account);
   }
   return id;
+}
+
+async function userForGoogleSub(ctx: MutationCtx, sub: string): Promise<Id<"users"> | null> {
+  for (const provider of GOOGLE_PROVIDERS) {
+    const account = await ctx.db
+      .query("authAccounts")
+      .withIndex("providerAndAccountId", (q) => q.eq("provider", provider).eq("providerAccountId", sub))
+      .unique();
+    if (account) return account.userId;
+  }
+  return null;
 }

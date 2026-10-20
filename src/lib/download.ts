@@ -1,8 +1,12 @@
 import { downloadZip } from "client-zip";
 import { uniqueFilenames } from "./filenames";
 
+export type Source = "gmail" | "chat";
+
 export type DownloadItem = {
   _id: string;
+  // Missing on older rows, which are Gmail.
+  source?: Source;
   messageId: string;
   attachmentId: string;
   filename: string;
@@ -14,7 +18,10 @@ export type DownloadItem = {
 export type DownloadProgress = { done: number; total: number; bytes: number; failed: string[] };
 
 const GMAIL = "https://gmail.googleapis.com/gmail/v1/users/me";
+const CHAT_MEDIA = "https://chat.googleapis.com/v1/media";
+const DRIVE = "https://www.googleapis.com/drive/v3/files";
 const PARALLEL = 4;
+const FAILED_LIST = "_failed-downloads.txt";
 
 type SaveFilePicker = (opts: { suggestedName: string }) => Promise<{
   createWritable(): Promise<WritableStream>;
@@ -38,7 +45,34 @@ function saveBlob(blob: Blob, name: string) {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-// Fetches attachment bytes straight from Gmail with a short-lived token from Convex,
+// Gmail returns base64url JSON; Chat media and Drive return the raw file.
+function attachmentRequest(item: DownloadItem) {
+  const raw = async (res: Response) => new Uint8Array(await res.arrayBuffer());
+  // Files shared into a chat from Drive (see driveFile in convex/chatParts.ts).
+  const [, kind, fileId] = item.attachmentId.match(/^(drive|drive-export)\/(.+)$/) ?? [];
+  if (item.source === "chat" && kind && fileId) {
+    const id = encodeURIComponent(fileId);
+    return {
+      url:
+        kind === "drive"
+          ? `${DRIVE}/${id}?alt=media&supportsAllDrives=true`
+          : `${DRIVE}/${id}/export?mimeType=${encodeURIComponent(item.mimeType)}`,
+      read: raw,
+    };
+  }
+  if (item.source === "chat") {
+    return {
+      url: `${CHAT_MEDIA}/${item.attachmentId}?alt=media`,
+      read: raw,
+    };
+  }
+  return {
+    url: `${GMAIL}/messages/${item.messageId}/attachments/${item.attachmentId}`,
+    read: async (res: Response) => base64UrlToBytes(((await res.json()) as { data: string }).data),
+  };
+}
+
+// Fetches attachment bytes straight from Google with a short-lived token from Convex,
 // zips them in the browser and saves the result. Returns false if the user cancelled.
 export async function downloadAttachments(
   items: DownloadItem[],
@@ -46,8 +80,9 @@ export async function downloadAttachments(
   onProgress: (p: DownloadProgress) => void,
 ): Promise<boolean> {
   if (items.length === 0) return true;
-  const names = uniqueFilenames(items.map((i) => i.filename));
-  const zipName = `gmail-attachments-${new Date().toISOString().slice(0, 10)}.zip`;
+  const names = uniqueFilenames(items.map((i) => i.filename),[FAILED_LIST]);
+  const prefix = items.every((i) => i.source === "chat") ? "chat" : "gmail";
+  const zipName = `${prefix}-attachments-${new Date().toISOString().slice(0, 10)}.zip`;
 
   // The save dialog must open while the click is still "fresh", before any awaits.
   const picker = (window as unknown as { showSaveFilePicker?: SaveFilePicker }).showSaveFilePicker;
@@ -66,14 +101,11 @@ export async function downloadAttachments(
   onProgress({ ...progress });
 
   async function fetchBytes(item: DownloadItem): Promise<Uint8Array<ArrayBuffer>> {
-    const url = `${GMAIL}/messages/${item.messageId}/attachments/${item.attachmentId}`;
+    const { url, read } = attachmentRequest(item);
     for (let attempt = 0; ; attempt++) {
       const current = token;
       const res = await fetch(url, { headers: { Authorization: `Bearer ${await current}` } });
-      if (res.ok) {
-        const { data } = (await res.json()) as { data: string };
-        return base64UrlToBytes(data);
-      }
+      if (res.ok) return read(res);
       if (attempt >= 3) throw new Error(`${res.status}`);
       if (res.status === 401) {
         if (token === current) token = getToken(); // one shared refresh for all workers
@@ -126,7 +158,7 @@ export async function downloadAttachments(
     }
     if (progress.failed.length) {
       yield {
-        name: "_failed-downloads.txt",
+        name: FAILED_LIST,
         input: `These attachments could not be downloaded:\n${progress.failed.join("\n")}\n`,
       };
     }

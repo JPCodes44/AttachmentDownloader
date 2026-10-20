@@ -7,6 +7,8 @@ export const MAX_ATTACHMENTS_PER_SCAN = 10_000;
 export const MAX_QUERY_LENGTH = 1_000;
 export const MAX_EXTENSIONS = 50;
 export const MAX_EXTENSION_LENGTH = 16;
+// A Chat scan reads every message in every space, so cap how many spaces it walks.
+export const MAX_CHAT_SPACES = 2_000;
 
 export const rateLimiter = new RateLimiter(components.rateLimiter, {
   startScan: { kind: "token bucket", rate: 20, period: HOUR, capacity: 5 },
