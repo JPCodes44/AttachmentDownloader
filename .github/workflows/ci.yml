@@ -3,8 +3,9 @@ name: CI/CD
 on:
   pull_request:
     branches: [main]
-    types: [opened, synchronize, reopened, closed]
-  workflow_dispatch: # manual "deploy main to staging" button in the Actions tab
+  push:
+    branches: [main] # a merged PR lands here: deploy to staging, then production after approval
+  workflow_dispatch: # manual "deploy main" button in the Actions tab
 
 permissions:
   contents: read
@@ -12,14 +13,10 @@ permissions:
 jobs:
   checks:
     name: Secret scan, typecheck, test, build
-    # Run on open/updated PRs, on merge, and on manual runs. Skip PRs closed without merging.
-    if: github.event.action != 'closed' || github.event.pull_request.merged
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          # For a merged PR, check exactly what landed on main.
-          ref: ${{ github.event.pull_request.merged && github.event.pull_request.merge_commit_sha || '' }}
           fetch-depth: 0 # gitleaks scans the full history
 
       - name: Scan for committed secrets (gitleaks)
@@ -41,66 +38,18 @@ jobs:
           VITE_CONVEX_URL: https://placeholder.convex.cloud
 
   deploy-staging:
-    name: Deploy to staging
     needs: checks
-    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged
-    runs-on: ubuntu-latest
-    environment:
-      name: staging
-      url: ${{ vars.STAGING_URL }}
-    concurrency:
-      group: deploy-staging
-      cancel-in-progress: false # never interrupt a deploy halfway
-    env:
-      # Scopes every Convex command to the staging deployment.
-      CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.merged && github.event.pull_request.merge_commit_sha || '' }}
+    if: github.event_name != 'pull_request'
+    uses: ./.github/workflows/deploy.yml
+    with:
+      environment: staging
+    secrets: inherit
 
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.4.3
-
-      - run: bun install --frozen-lockfile
-
-      - name: Check staging secrets are configured
-        run: |
-          if [ -z "$CONVEX_DEPLOY_KEY" ] || [ -z "${{ secrets.VERCEL_TOKEN }}" ]; then
-            echo "::error::Add CONVEX_DEPLOY_KEY and VERCEL_TOKEN secrets to the 'staging' environment (see README)."
-            exit 1
-          fi
-
-      - name: Deploy Convex backend
-        run: bunx convex deploy --typecheck=disable
-
-      - name: Build the website
-        run: bun run build
-        env:
-          VITE_CONVEX_URL: ${{ vars.STAGING_CONVEX_URL }}
-
-      - name: Package for Vercel (static files + single-page-app fallback)
-        run: |
-          mkdir -p .vercel/output/static
-          cp -r dist/. .vercel/output/static/
-          cat > .vercel/output/config.json <<'JSON'
-          {
-            "version": 3,
-            "routes": [
-              { "src": "/index-[^/]+\\.(js|css)$", "headers": { "cache-control": "public, max-age=31536000, immutable" }, "continue": true },
-              { "handle": "filesystem" },
-              { "src": "/.*", "dest": "/index.html" }
-            ]
-          }
-          JSON
-
-      - name: Deploy website to Vercel
-        run: bunx vercel@62.2.0 deploy --prebuilt --prod --yes --token "$VERCEL_TOKEN"
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
-
-      - name: Summary
-        run: echo "Staging is live at ${{ vars.STAGING_URL }}" >> "$GITHUB_STEP_SUMMARY"
+  # Waits for a reviewer to approve the "production" environment in GitHub,
+  # then ships the exact commit that just went to staging.
+  deploy-production:
+    needs: deploy-staging
+    uses: ./.github/workflows/deploy.yml
+    with:
+      environment: production
+    secrets: inherit

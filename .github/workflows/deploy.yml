@@ -1,0 +1,77 @@
+name: Deploy
+
+# Reusable: deploys one commit's Convex backend and website to one GitHub
+# environment (staging or production). Each environment holds its own
+# CONVEX_DEPLOY_KEY / VERCEL_TOKEN secrets and CONVEX_URL / SITE_URL /
+# VERCEL_ORG_ID / VERCEL_PROJECT_ID variables.
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy to ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ inputs.environment }}
+      url: ${{ vars.SITE_URL }}
+    concurrency:
+      group: deploy-${{ inputs.environment }}
+      cancel-in-progress: false # never interrupt a deploy halfway
+    env:
+      # Scopes every Convex command to this environment's deployment.
+      CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.3
+
+      - run: bun install --frozen-lockfile
+
+      - name: Check secrets are configured
+        run: |
+          if [ -z "$CONVEX_DEPLOY_KEY" ] || [ -z "${{ secrets.VERCEL_TOKEN }}" ]; then
+            echo "::error::Add CONVEX_DEPLOY_KEY and VERCEL_TOKEN secrets to the '${{ inputs.environment }}' environment (see README)."
+            exit 1
+          fi
+
+      - name: Deploy Convex backend
+        run: bunx convex deploy --typecheck=disable
+
+      - name: Build the website
+        run: bun run build
+        env:
+          VITE_CONVEX_URL: ${{ vars.CONVEX_URL }}
+
+      - name: Package for Vercel (static files + single-page-app fallback)
+        run: |
+          mkdir -p .vercel/output/static
+          cp -r dist/. .vercel/output/static/
+          cat > .vercel/output/config.json <<'JSON'
+          {
+            "version": 3,
+            "routes": [
+              { "src": "/index-[^/]+\\.(js|css)$", "headers": { "cache-control": "public, max-age=31536000, immutable" }, "continue": true },
+              { "handle": "filesystem" },
+              { "src": "/.*", "dest": "/index.html" }
+            ]
+          }
+          JSON
+
+      - name: Deploy website to Vercel
+        run: bunx vercel@62.2.0 deploy --prebuilt --prod --yes --token "$VERCEL_TOKEN"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+
+      - name: Summary
+        run: echo "${{ inputs.environment }} is live at ${{ vars.SITE_URL }}" >> "$GITHUB_STEP_SUMMARY"
