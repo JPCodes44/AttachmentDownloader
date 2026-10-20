@@ -27,7 +27,7 @@
 </p>
 
 <p align="center">
-  <a href="https://gmail-attachments.vercel.app"><b>Production</b></a> ·
+  <a href="https://attachmentdownloader.vercel.app"><b>Production</b></a> ·
   <a href="https://gmail-attachments-staging.vercel.app"><b>Staging</b></a>
 </p>
 
@@ -54,7 +54,7 @@ Checks: `bun run typecheck` · `bun test` · `bun run build`
 |---|---|---|
 | dev | http://localhost:3000 | your `dev/…` deployment |
 | staging | https://gmail-attachments-staging.vercel.app | `staging` (glorious-leopard-388) |
-| production | https://gmail-attachments.vercel.app | default prod (flippant-jay-368) |
+| production | https://attachmentdownloader.vercel.app | default prod (flippant-jay-368) |
 
 - **Pull requests:** checks only.
 - **Pushes to `main`:** checks, then staging, then production after you approve it under **Review deployments** on the run.
