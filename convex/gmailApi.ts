@@ -20,25 +20,6 @@ function clientCredentials() {
   return { id, secret };
 }
 
-export function gmailRedirectUri(): string {
-  return `${process.env.CONVEX_SITE_URL}/gmail/callback`;
-}
-
-export function buildConsentUrl(state: string): string {
-  const url = new URL("https://accounts.google.com/o/oauth2/v2/auth");
-  url.search = new URLSearchParams({
-    client_id: clientCredentials().id,
-    redirect_uri: gmailRedirectUri(),
-    response_type: "code",
-    scope: GMAIL_SCOPE,
-    access_type: "offline",
-    prompt: "consent",
-    include_granted_scopes: "true",
-    state,
-  }).toString();
-  return url.toString();
-}
-
 async function tokenRequest(params: Record<string, string>) {
   const { id, secret } = clientCredentials();
   const res = await fetch(TOKEN_URL, {
@@ -58,18 +39,6 @@ async function tokenRequest(params: Record<string, string>) {
     throw new Error(`Google token request failed: ${body.error_description ?? body.error ?? res.status}`);
   }
   return body;
-}
-
-export async function exchangeCode(code: string) {
-  const body = await tokenRequest({
-    code,
-    grant_type: "authorization_code",
-    redirect_uri: gmailRedirectUri(),
-  });
-  if (!body.access_token || !body.refresh_token) {
-    throw new Error("Google did not return a refresh token. Remove the app's access in your Google account and connect again.");
-  }
-  return { accessToken: body.access_token, refreshToken: body.refresh_token };
 }
 
 export async function refreshAccessToken(refreshToken: string) {
@@ -116,10 +85,6 @@ export function getMessage(accessToken: string, id: string) {
     format: "full",
     fields: "id,internalDate,payload",
   });
-}
-
-export function getProfile(accessToken: string) {
-  return gmailGet<{ emailAddress: string }>(accessToken, "/profile");
 }
 
 export function listLabels(accessToken: string) {

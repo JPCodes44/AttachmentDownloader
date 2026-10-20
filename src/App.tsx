@@ -1,40 +1,19 @@
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useAction, useConvexAuth, useQuery } from "convex/react";
-import { useEffect, useState } from "react";
 import { api } from "../convex/_generated/api";
 import { ConnectGmail } from "./components/ConnectGmail";
 import { Extractor } from "./components/Extractor";
 import { SignIn } from "./components/SignIn";
 
-const CONNECT_RESULTS: Record<string, { tone: "ok" | "bad"; text: string }> = {
-  connected: { tone: "ok", text: "Gmail connected." },
-  denied: { tone: "bad", text: "Gmail access was not granted." },
-  "expired-link": { tone: "bad", text: "That connect link expired. Try again." },
-  error: { tone: "bad", text: "Something went wrong connecting Gmail. Try again." },
-};
-
-// Reads ?gmail=… left by the OAuth callback once, then tidies the URL.
-function useConnectResult() {
-  const [result] = useState(() => new URLSearchParams(location.search).get("gmail"));
-  useEffect(() => {
-    if (!result) return;
-    const url = new URL(location.href);
-    url.searchParams.delete("gmail");
-    history.replaceState(null, "", url);
-  }, [result]);
-  return result ? CONNECT_RESULTS[result] : undefined;
-}
-
 export function App() {
   const { isLoading, isAuthenticated } = useConvexAuth();
-  const connectResult = useConnectResult();
 
   if (isLoading) return <div className="center muted">Loading…</div>;
   if (!isAuthenticated) return <SignIn />;
-  return <SignedIn notice={connectResult} />;
+  return <SignedIn />;
 }
 
-function SignedIn({ notice }: { notice?: { tone: "ok" | "bad"; text: string } }) {
+function SignedIn() {
   const gmail = useQuery(api.gmail.status);
   const disconnect = useAction(api.gmail.disconnect);
   const { signOut } = useAuthActions();
@@ -60,8 +39,6 @@ function SignedIn({ notice }: { notice?: { tone: "ok" | "bad"; text: string } })
           </button>
         </div>
       </header>
-
-      {notice && <div className={`banner ${notice.tone}`}>{notice.text}</div>}
 
       <main className="main">
         {gmail === undefined ? (

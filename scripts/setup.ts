@@ -81,5 +81,4 @@ for (const name of ["AUTH_GOOGLE_ID", "AUTH_GOOGLE_SECRET"]) {
 console.log(`
 Add these to your Google OAuth client:
   Authorized JavaScript origin:  ${siteUrl}
-  Authorized redirect URIs:      ${convexSiteUrl}/api/auth/callback/google
-                                 ${convexSiteUrl}/gmail/callback`);
+  Authorized redirect URI:       ${convexSiteUrl}/api/auth/callback/google`);

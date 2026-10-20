@@ -40,10 +40,3 @@ export async function decrypt(ciphertext: string, rawKey?: string): Promise<stri
   );
   return new TextDecoder().decode(plain);
 }
-
-export function randomToken(bytes = 32): string {
-  return b64encode(crypto.getRandomValues(new Uint8Array(bytes)))
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/, "");
-}

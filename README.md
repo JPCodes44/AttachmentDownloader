@@ -1,16 +1,15 @@
 # GmailAttachments
 📎 Bulk-download every attachment from your Gmail inbox in one go.
 
-Sign in with Google, connect Gmail (read-only), search with Gmail syntax or quick filters, tick the files you want (or **Select all**) and download them as one ZIP.
+Sign in with Google (one consent screen, including read-only Gmail access), search with Gmail syntax or quick filters, tick the files you want (or **Select all**) and download them as one ZIP.
 
 **Stack:** [Convex](https://convex.dev) backend · React + TypeScript frontend served by `Bun.serve` · type-checked by `bun check` (TypeScript 7, the native Go compiler) · tests with `bun test` + `convex-test`.
 
 ## How it works
 
 ```
-Browser ──sign in──► Convex Auth (Google)
-Browser ──Connect Gmail──► Convex makes a one-time state ticket ──► Google consent (gmail.readonly)
-Google ──code──► Convex /gmail/callback ──► refresh token stored AES-GCM encrypted
+Browser ──Sign in with Google──► Google consent (name, email, gmail.readonly)
+Google ──tokens──► Convex Auth profile() encrypts the refresh token (AES-GCM) ──► gmailAccounts
 Browser ──Find attachments──► scans.start ──► scanPage action, 100 emails per run, loops until done
                                               └─► attachment *metadata* rows (live in the UI)
 Browser ──Download──► getAccessToken (1-hour token) ──► fetch bytes straight from Gmail ──► client-zip ──► .zip
@@ -74,6 +73,6 @@ Staging is the `staging` deployment in the Convex project, and the website is se
 
 ## Good to know
 - **Free:** the Gmail API costs nothing, and the Convex free tier is plenty, since only metadata is stored.
-- **7-day reconnect:** while the Google app is in Testing mode, Google expires the Gmail permission after 7 days. The app notices and shows a **Reconnect Gmail** button. Publishing the app for the public would need Google's restricted-scope verification.
+- **7-day expiry:** while the Google app is in Testing mode, Google expires the Gmail permission after 7 days. You stay signed in; the app shows **Sign in with Google again** to renew Gmail access. Switching the Google app to "In production" without verification removes the limit (users see an "unverified app" warning, up to 100 users).
 - **Inline images** (signature logos and the like) are hidden by default. Use the "Include inline images" toggle to show them.
 - Each user keeps only their most recent scan. Starting a new one cleans up the old one.
