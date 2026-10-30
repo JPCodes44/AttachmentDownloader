@@ -163,7 +163,7 @@ describe("scans", () => {
     }));
 
     const scan = await asUser.query(api.scans.get, { scanId });
-    expect(scan.query).toBe("from:bob has:attachment");
+    expect(scan.query).toBe("from:bob");
     expect(scan.extensions).toEqual(["pdf"]);
 
     await t.mutation(internal.scans.recordPage, {
