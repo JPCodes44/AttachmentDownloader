@@ -53,40 +53,8 @@ jobs:
           VITE_GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
           VITE_GOOGLE_CHAT: ${{ vars.GOOGLE_CHAT || 'off' }}
 
-      - name: Package for Vercel (static files, clean page URLs, single-page-app fallback)
-        run: |
-          mkdir -p .vercel/output/static
-          cp -r dist/. .vercel/output/static/
-          cat > .vercel/output/config.json <<'JSON'
-          {
-            "version": 3,
-            "routes": [
-              { "src": "/.*", "headers": {
-                "content-security-policy": "default-src 'self'; script-src 'self' https://accounts.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.convex.cloud wss://*.convex.cloud https://*.convex.site https://gmail.googleapis.com https://chat.googleapis.com https://www.googleapis.com https://oauth2.googleapis.com https://accounts.google.com; frame-src https://accounts.google.com/gsi/; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'",
-                "x-frame-options": "DENY",
-                "x-content-type-options": "nosniff",
-                "referrer-policy": "strict-origin-when-cross-origin",
-                "permissions-policy": "camera=(), microphone=(), geolocation=()"
-              }, "continue": true },
-              { "src": "/[^/]+-[a-z0-9]{8}\\.(js|css|svg)$", "headers": { "cache-control": "public, max-age=31536000, immutable" }, "continue": true },
-              { "src": "/(gmail-attachments-not-downloading|download-all-gmail-attachments|download-gmail-attachments-from-sender|privacy)\\.html$", "status": 308, "headers": { "location": "/$1" } },
-              { "handle": "filesystem" },
-              { "src": "/(gmail-attachments-not-downloading|download-all-gmail-attachments|download-gmail-attachments-from-sender|privacy)/?$", "dest": "/$1.html" },
-              { "src": "/.*", "dest": "/index.html" }
-            ]
-          }
-          JSON
-          # Keep the Vercel default production alias from starting Google OAuth
-          # on a different origin than the domain registered with Google.
-          if [ "${{ inputs.environment }}" = production ]; then
-            jq '.routes |= [{ "src": "/(.*)", "has": [{ "type": "host", "value": "attachmentdownloader.vercel.app" }], "status": 308, "headers": { "location": "https://attachmentdownloader.ca/$1" } }] + .' \
-              .vercel/output/config.json > config.tmp && mv config.tmp .vercel/output/config.json
-          fi
-          # Only production may be indexed; otherwise staging competes with it in search results.
-          if [ "${{ inputs.environment }}" != production ]; then
-            jq '.routes |= [{ "src": "/.*", "headers": { "x-robots-tag": "noindex" }, "continue": true }] + .' \
-              .vercel/output/config.json > config.tmp && mv config.tmp .vercel/output/config.json
-          fi
+      - name: Package website for Vercel
+        run: bun scripts/package-vercel.ts ${{ inputs.environment }}
 
       - name: Deploy website to Vercel
         run: bunx vercel@62.2.0 deploy --prebuilt --prod --yes --token "$VERCEL_TOKEN"

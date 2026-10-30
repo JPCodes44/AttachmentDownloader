@@ -6,12 +6,16 @@ Use it when someone wants to download all attachments from Gmail, from one sende
 
 ## Guides
 
+- [All download guides](https://attachmentdownloader.ca/guides): choose a guide by task
 - [How to download all attachments from Gmail at once](https://attachmentdownloader.ca/download-all-gmail-attachments): four ways, from Gmail's Download all button to Google Takeout, Apps Script and a one-ZIP download
 - [How to download all attachments from one sender in Gmail](https://attachmentdownloader.ca/download-gmail-attachments-from-sender): Gmail search operators and a one-ZIP download
 - [Can't download attachments in Gmail? 8 fixes](https://attachmentdownloader.ca/gmail-attachments-not-downloading): blocked files, browser and cookie problems, work accounts, Drive links, mobile apps
+- [Download PDF attachments from Gmail](https://attachmentdownloader.ca/download-pdf-attachments-gmail): message searches versus individual PDF file filters, invoice and receipt examples, and limitations
+- [Download attachments by date range](https://attachmentdownloader.ca/download-gmail-attachments-by-date): month/year queries, final-day boundaries, timezone caveats and batch downloads
 
 ## About
 
+- [About and support](https://attachmentdownloader.ca/about): how the app works, its limits, source code and support
 - [App](https://attachmentdownloader.ca/): sign in with Google to use it
 - [Privacy policy](https://attachmentdownloader.ca/privacy): what it reads, stores and deletes
 - Limits: one search covers up to 25,000 emails or 10,000 attachments

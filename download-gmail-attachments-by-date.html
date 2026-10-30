@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Download Gmail Attachments by Date Range</title><meta name="description" content="Download Gmail attachments from a month, year or custom date range. Learn after: and before: searches, date boundaries, and how to split large exports." />
+<link rel="canonical" href="https://attachmentdownloader.ca/download-gmail-attachments-by-date" /><link rel="icon" type="image/svg+xml" href="./public/favicon.svg" /><link rel="stylesheet" href="./src/styles.css" /></head>
+<body>
+    <a class="skip-link" href="#main-content">Skip to content</a><div class="landing"><header class="topbar"><a class="brand" href="/"><span class="brand-mark" aria-hidden="true"></span>AttachmentDownloader</a><nav aria-label="Main navigation"><a href="/guides">Guides</a> <a class="btn primary small" href="/">Find attachments</a></nav></header>
+<main class="doc" id="main-content"><nav class="breadcrumbs small" aria-label="Breadcrumb"><a href="/">Home</a> / <a href="/guides">Guides</a> / Guide</nav><h1>How to download Gmail attachments by date range</h1><p class="muted small">By the <a href="/about">AttachmentDownloader project</a> · Updated <time datetime="2026-10-30">October 30, 2026</time></p>
+<p><strong>Use <code>has:attachment after:2026/01/01 before:2027/01/01</code> to find Gmail messages with attachments in a year-long window.</strong> To download files from the matching messages together, apply a date range in AttachmentDownloader, review the results and save your selection as a ZIP.</p>
+<nav class="guide-toc" aria-label="On this page"><p><b>On this page</b></p><ul><li><a href="#search-a-month-year-or-rolling-period">Search a month, year or rolling period</a></li><li><a href="#download-the-matching-attachments">Download the matching attachments</a></li><li><a href="#include-the-last-day-of-your-date-range">Include the last day of your date range</a></li><li><a href="#split-a-large-mailbox-into-smaller-batches">Split a large mailbox into smaller batches</a></li><li><a href="#what-the-date-filter-does-not-do">What the date filter does not do</a></li><li><a href="#related-guides-and-references">Related guides and references</a></li></ul></nav><h2 id="search-a-month-year-or-rolling-period">Search a month, year or rolling period</h2><p>Gmail's date search applies to the email's date, not the date a document was created or last edited. Combine it with a sender or file type when you need a smaller result set.</p>
+<div class="table-wrap"><table class="guide-table"><caption>Date-based Gmail attachment searches</caption><thead><tr><th scope="col">Window</th><th scope="col">Search</th></tr></thead><tbody>
+<tr><td>October 2026</td><td><code>has:attachment after:2026/10/01 before:2026/11/01</code></td></tr>
+<tr><td>Calendar year 2026</td><td><code>has:attachment after:2026/01/01 before:2027/01/01</code></td></tr>
+<tr><td>Past 30 days</td><td><code>has:attachment newer_than:30d</code></td></tr>
+<tr><td>Supplier PDFs in a date window</td><td><code>from:supplier@example.com filename:pdf after:2026/10/01 before:2026/11/01</code></td></tr>
+</tbody></table></div>
+<h2 id="download-the-matching-attachments">Download the matching attachments</h2><ol>
+<li><a href="/">Open AttachmentDownloader</a>, sign in with Google, then connect Gmail with read-only access.</li>
+<li>Set the <strong>After</strong> and <strong>Before</strong> date filters, or paste a date query into the Gmail search field.</li>
+<li>Optionally add a sender, label or file-type filter. Use the PDF filter when you want <a href="/download-pdf-attachments-gmail">only PDF attachments</a>.</li>
+<li>Choose <strong>Find attachments</strong> and review the dates and filenames. Select individual files or choose <strong>Select all</strong>.</li>
+<li>Choose <strong>Download ZIP</strong> for multiple selections, or <strong>Download file</strong> for one file.</li>
+</ol>
+<h2 id="include-the-last-day-of-your-date-range">Include the last day of your date range</h2><p>The <strong>Before</strong> boundary excludes the specified day. To include October 31, use November 1 as the Before date. The app sends its date filters using Gmail's <code>after:</code> and <code>before:</code> search operators.</p>
+<p>If you are working with exact cutoffs, check messages near midnight against Gmail's results. Google's API interprets date strings using its documented timezone rules; an email near a boundary can fall on a different calendar day from the one displayed on your device. <a href="https://developers.google.com/workspace/gmail/api/guides/filtering">See Google's API date and timezone guidance</a>.</p>
+<h2 id="split-a-large-mailbox-into-smaller-batches">Split a large mailbox into smaller batches</h2><p>One search stops at 25,000 messages or 10,000 attachments. If the app reports that it reached the limit, narrow the range and search again. Monthly or weekly batches make it easier to check the results and retry an interrupted download.</p><p>Keep track of each batch's After and Before values and check the boundary messages, especially for records where completeness matters. Don't assume that a search which hit its limit contains every file in the period.</p>
+<h2 id="what-the-date-filter-does-not-do">What the date filter does not do</h2><ul>
+<li>It does not read invoice dates printed inside PDFs or dates in filenames.</li>
+<li>It does not fetch files that were only shared as Google Drive links.</li>
+<li>It does not schedule recurring backups. The browser page must stay open while a search or download runs.</li>
+<li>It does not delete or modify Gmail messages.</li>
+</ul>
+<h2 id="related-guides-and-references">Related guides and references</h2><ul>
+<li><a href="/download-gmail-attachments-from-sender">Download attachments from one sender</a>.</li>
+<li><a href="/download-all-gmail-attachments">Compare bulk downloads and Google Takeout</a>.</li>
+<li><a href="https://support.google.com/mail/answer/7190?hl=en">Google's Gmail search operator reference</a>.</li>
+</ul><div class="callout"><p><strong>Collect files for a specific period.</strong> Choose your dates, inspect the results and download your selection.</p><a class="btn primary" href="/">Find attachments by date</a></div>
+</main><footer class="landing-footer muted small"><a href="/">AttachmentDownloader</a><a href="/guides">Download guides</a><a href="/about">About &amp; support</a><a href="/privacy">Privacy</a></footer></div></body></html>

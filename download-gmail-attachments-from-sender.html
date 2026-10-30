@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>How to Download All Attachments from One Sender in Gmail | AttachmentDownloader</title>
+    <title>Download Gmail Attachments from One Sender</title>
     <meta
       name="description"
       content="Find every attachment a person or company sent you in Gmail with from: and has:attachment, then download them all as one ZIP instead of opening each email."
@@ -36,22 +36,23 @@
     <link rel="stylesheet" href="./src/styles.css" />
   </head>
   <body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
     <div class="landing">
       <header class="topbar">
         <a class="brand" href="/"><span class="brand-mark" aria-hidden="true"></span>AttachmentDownloader</a>
         <a class="btn primary small" href="/">Download attachments as a ZIP</a>
       </header>
 
-      <main class="doc">
-        <h1>How to download all attachments from one sender in Gmail</h1>
-        <p class="muted small">Updated October 2026</p>
+      <main class="doc" id="main-content">
+        <nav class="breadcrumbs small" aria-label="Breadcrumb"><a href="/">Home</a> / <a href="/guides">Guides</a></nav><h1>How to download all attachments from one sender in Gmail</h1>
+        <p class="muted small">By the <a href="/about">AttachmentDownloader project</a> · Updated <time datetime="2026-10-30">October 30, 2026</time></p>
         <p>
           <b>Search Gmail for <code>from:sender@example.com has:attachment</code> to list every email with attachments
           from that sender.</b> Gmail then makes you open each email to save its files. To get them all at once, run
           the same search in AttachmentDownloader and download every file as one ZIP.
         </p>
 
-        <h2>Find a sender's attachments in Gmail</h2>
+        <nav class="guide-toc" aria-label="On this page"><p><b>On this page</b></p><ul><li><a href="#find-a-sender-s-attachments-in-gmail">Find a sender&#x27;s attachments in Gmail</a></li><li><a href="#download-them-all-as-one-zip">Download them all as one ZIP</a></li><li><a href="#common-uses">Common uses</a></li><li><a href="#narrow-a-supplier-s-files-by-type-and-period">Narrow a supplier&#x27;s files by type and period</a></li><li><a href="#questions">Questions</a></li></ul></nav><h2 id="find-a-sender-s-attachments-in-gmail">Find a sender's attachments in Gmail</h2>
         <p>Type one of these into the Gmail search bar:</p>
         <ul>
           <li><code>from:anna@example.com has:attachment</code> for one person.</li>
@@ -64,7 +65,7 @@
           open each one and click <b>Download all</b>.
         </p>
 
-        <h2>Download them all as one ZIP</h2>
+        <h2 id="download-them-all-as-one-zip">Download them all as one ZIP</h2>
         <ol>
           <li><a href="/">Open AttachmentDownloader</a>, sign in with Google, then connect Gmail in the browser. Google grants read-only access.</li>
           <li>Type the sender's name, email address or domain (such as <code>example.com</code>) in the <b>From</b> box.</li>
@@ -81,7 +82,7 @@
           <a class="btn primary" href="/">Find my attachments</a>
         </div>
 
-        <h2>Common uses</h2>
+        <h2 id="common-uses">Common uses</h2>
         <ul>
           <li><b>Invoices and receipts</b> from a supplier or service, for your accountant or taxes.</li>
           <li><b>Photos</b> a family member sent over the years.</li>
@@ -89,7 +90,10 @@
           <li><b>Statements</b> from your bank or utility company.</li>
         </ul>
 
-        <h2>Questions</h2>
+        <h2 id="narrow-a-supplier-s-files-by-type-and-period">Narrow a supplier's files by type and period</h2>
+        <p>For invoices, combine the sender with the <b>PDF</b> filter and a date window. Read <a href="/download-pdf-attachments-gmail">how to download only PDF attachments</a> and <a href="/download-gmail-attachments-by-date">how Gmail date boundaries work</a>. A subject search such as <code>subject:invoice</code> narrows matching emails; it does not classify the contents of each document.</p>
+        <p>One search stops at 25,000 messages or 10,000 attachments. If it reaches that limit, search smaller date ranges. A single selected file downloads directly; multiple selections download as a ZIP.</p>
+        <h2 id="questions">Questions</h2>
         <h3>Can I include several senders?</h3>
         <p>
           Yes. Edit the Gmail search box in AttachmentDownloader to something like
@@ -99,14 +103,9 @@
         <p>Only if you turn on <b>Include inline images</b>. By default you get real attachments, not logos and signatures.</p>
         <h3>What about attachments from everyone?</h3>
         <p>See <a href="/download-all-gmail-attachments">how to download all attachments from Gmail at once</a>.</p>
-      </main>
+      <p class="small muted">Reference: <a href="https://support.google.com/mail/answer/7190?hl=en">Google's Gmail search operator documentation</a>.</p></main>
 
-      <footer class="landing-footer muted small">
-        <a href="/">AttachmentDownloader</a>
-        <a href="/download-all-gmail-attachments">Download all Gmail attachments</a>
-        <a href="/gmail-attachments-not-downloading">Fix Gmail attachment downloads</a>
-        <a href="/privacy">Privacy</a>
-      </footer>
+      <footer class="landing-footer muted small"><a href="/">AttachmentDownloader</a><a href="/guides">Download guides</a><a href="/about">About &amp; support</a><a href="/privacy">Privacy</a></footer>
     </div>
   </body>
 </html>
