@@ -5,17 +5,19 @@ import { FAQ } from "../lib/faq";
 export function Landing({ onSignIn }: { onSignIn?: () => void }) {
   return (
     <div className="landing">
+      <a className="skip-link" href="#main-content">Skip to content</a>
       <header className="topbar">
         <a className="brand" href="/">
           <span className="brand-mark" aria-hidden="true" />
           AttachmentDownloader
         </a>
-        <a className="small" href="/gmail-attachments-not-downloading">
-          Can't download an attachment?
-        </a>
+        <nav className="topbar-actions small" aria-label="Main navigation">
+          <a href="/guides">Download guides</a>
+          <a href="/about">About &amp; support</a>
+        </nav>
       </header>
 
-      <main>
+      <main id="main-content">
         <section className="landing-hero">
           <h1>Download all your Gmail attachments at once</h1>
           <p className="lead muted">
@@ -28,6 +30,38 @@ export function Landing({ onSignIn }: { onSignIn?: () => void }) {
           <p className="muted small">
             Google will ask for <b>read-only</b> Gmail access. Searches and downloads run in your browser; Gmail data
             and files are not sent to our backend.
+          </p>
+          <p className="small muted">Free to use · No extension to install · Download original files</p>
+        </section>
+
+        <section className="landing-section">
+          <h2>Find the files you need</h2>
+          <div className="guide-grid">
+            <a className="guide-card" href="/download-pdf-attachments-gmail">
+              <h3>PDFs, invoices and receipts</h3>
+              <p>Filter individual attachments to PDF files, then narrow by sender or subject.</p>
+            </a>
+            <a className="guide-card" href="/download-gmail-attachments-from-sender">
+              <h3>Files from one sender</h3>
+              <p>Collect the attachments a person or supplier sent across many emails.</p>
+            </a>
+            <a className="guide-card" href="/download-gmail-attachments-by-date">
+              <h3>A month, year or custom period</h3>
+              <p>Choose a date window and split large searches into manageable batches.</p>
+            </a>
+          </div>
+        </section>
+
+        <section className="landing-section">
+          <h2>What to know before downloading</h2>
+          <p className="muted">
+            One search stops at 25,000 emails or 10,000 attachments. For a large mailbox, narrow the sender or date
+            range and download in batches. Keep the page open until the download finishes. Google Drive links
+            are separate from email attachments.
+          </p>
+          <p className="muted">
+            For a complete mailbox archive, compare <a href="/download-all-gmail-attachments">Google Takeout and
+            other download methods</a>. Learn <a href="/about">how this app works</a> and read the <a href="/privacy">privacy policy</a>.
           </p>
         </section>
 
@@ -75,6 +109,8 @@ export function Landing({ onSignIn }: { onSignIn?: () => void }) {
         <a href="/download-all-gmail-attachments">Download all Gmail attachments</a>
         <a href="/download-gmail-attachments-from-sender">Attachments from one sender</a>
         <a href="/gmail-attachments-not-downloading">Fix Gmail attachment downloads</a>
+        <a href="/guides">All download guides</a>
+        <a href="/about">About &amp; support</a>
         <a href="/privacy">Privacy</a>
       </footer>
     </div>

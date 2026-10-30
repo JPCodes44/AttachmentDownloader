@@ -30,6 +30,18 @@ Checks: `bun run typecheck` · `bun test` · `bun run build`
 </details>
 
 <details>
+<summary><b>Public pages and search visibility</b></summary>
+
+- All root HTML pages are build entrypoints. Add an accurate modified date in `scripts/prerender.tsx` when creating or substantially updating a page.
+- The build prerenders the homepage, enriches public pages with metadata and structured data, and generates `public/sitemap.xml` and `dist/sitemap.xml`. `bun run seo:check` validates the built metadata, schema, internal links, assets, sitemap and Google ownership file.
+- Keep `public/googlefd6628355733cf4e.html`: Google uses it to maintain Search Console ownership.
+- Package the checked build with `bun scripts/package-vercel.ts production` or `staging`. Both CI and frontend-only manual publication use this script. Production redirects known Vercel aliases to the custom domain; staging sends `X-Robots-Tag: noindex`. Missing URLs return 404 instead of the homepage.
+- A frontend-only publication uses existing public production `VITE_*` settings, `bun run build`, `bun run package:production`, then `vercel deploy --prebuilt --prod`. Confirm the linked Vercel project before deploying. This path does not deploy Convex.
+- Search Console supplies search performance and indexing reports. The site has no added analytics trackers. Submit `https://attachmentdownloader.ca/sitemap.xml` after publishing new pages.
+
+</details>
+
+<details>
 <summary><b>Environments and deploys</b></summary>
 
 | Environment | Website | Convex deployment |

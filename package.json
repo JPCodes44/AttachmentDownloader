@@ -7,7 +7,9 @@
     "dev:convex": "convex dev --typecheck=disable",
     "dev:web": "bun --hot server.ts",
     "start": "NODE_ENV=production bun server.ts",
-    "build": "bun build --check ./index.html ./gmail-attachments-not-downloading.html ./download-all-gmail-attachments.html ./download-gmail-attachments-from-sender.html ./privacy.html --outdir dist --minify --env='VITE_*' && bun scripts/prerender.tsx",
+    "build": "bun scripts/build.ts",
+    "seo:check": "bun scripts/check-site.ts",
+    "package:production": "bun scripts/package-vercel.ts production",
     "typecheck": "tsc --noEmit",
     "test": "bun test"
   },
