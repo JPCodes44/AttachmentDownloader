@@ -55,8 +55,10 @@ describe("auth enforcement", () => {
 
   test("a user cannot read another user's scan", async () => {
     const { t, userId, asUser } = await setup();
-    await connect(t, userId);
-    const scanId = await asUser.mutation(api.scans.start, { query: "", extensions: [] });
+    const scanId = await t.run((ctx) => ctx.db.insert("scans", {
+      userId, source: "chat", query: "", extensions: [], status: "running",
+      messagesScanned: 0, attachmentsFound: 0, inlineFound: 0, createdAt: Date.now(),
+    }));
     const other = await t.run((ctx) => ctx.db.insert("users", {}));
     const otherSession = await t.run((ctx) =>
       ctx.db.insert("authSessions", { userId: other, expirationTime: Date.now() + 60_000 }),
@@ -155,8 +157,10 @@ describe("scans", () => {
 
   test("pages are recorded, counted and listed newest first", async () => {
     const { t, userId, asUser } = await setup();
-    await connect(t, userId);
-    const scanId = await asUser.mutation(api.scans.start, { query: "from:bob", extensions: [".PDF"] });
+    const scanId = await t.run((ctx) => ctx.db.insert("scans", {
+      userId, source: "chat", query: "from:bob", extensions: ["pdf"], status: "running",
+      messagesScanned: 0, attachmentsFound: 0, inlineFound: 0, createdAt: Date.now(),
+    }));
 
     const scan = await asUser.query(api.scans.get, { scanId });
     expect(scan.query).toBe("from:bob has:attachment");
@@ -190,8 +194,11 @@ describe("scans", () => {
 
   test("cancelled scans drop late results; a new scan cleans up the old one", async () => {
     const { t, userId, asUser } = await setup();
-    await connect(t, userId);
-    const first = await asUser.mutation(api.scans.start, { query: "", extensions: [] });
+    const makeScan = () => t.run((ctx) => ctx.db.insert("scans", {
+      userId, source: "chat", query: "", extensions: [], status: "running",
+      messagesScanned: 0, attachmentsFound: 0, inlineFound: 0, createdAt: Date.now(),
+    }));
+    const first = await makeScan();
     await asUser.mutation(api.scans.cancel, { scanId: first });
     await t.mutation(internal.scans.recordPage, { scanId: first, attachments: [attachment(1)], messagesScanned: 1 });
     expect(await asUser.query(api.scans.get, { scanId: first })).toMatchObject({
@@ -199,7 +206,7 @@ describe("scans", () => {
       attachmentsFound: 0,
     });
 
-    const second = await asUser.mutation(api.scans.start, { query: "", extensions: [] });
+    const second = await makeScan();
     await t.mutation(internal.scans.cleanup, { scanId: first });
     expect(await t.run((ctx) => ctx.db.get(first))).toBeNull();
     expect((await asUser.query(api.scans.latest, {}))?._id).toBe(second);
@@ -221,29 +228,11 @@ describe("scans", () => {
       }),
     );
 
-  test("an OR in the search can't escape the attachment filter", async () => {
-    const { t, userId, asUser } = await setup();
-    await connect(t, userId);
-    const scanId = await asUser.mutation(api.scans.start, { query: "x OR in:anywhere", extensions: [] });
-    expect((await asUser.query(api.scans.get, { scanId })).query).toBe("(x OR in:anywhere) has:attachment");
-  });
-
-  test("oversized searches are rejected", async () => {
-    const { t, userId, asUser } = await setup();
-    await connect(t, userId);
-    await expect(asUser.mutation(api.scans.start, { query: "a".repeat(1001), extensions: [] })).rejects.toThrow(
-      "too long",
+  test("Gmail searches are rejected by Convex", async () => {
+    const { asUser } = await setup();
+    await expect(asUser.mutation(api.scans.start, { query: "x OR in:anywhere", extensions: [] })).rejects.toThrow(
+      "Gmail searches now run locally in your browser",
     );
-    await expect(
-      asUser.mutation(api.scans.start, { query: "", extensions: Array.from({ length: 51 }, (_, i) => `e${i}`) }),
-    ).rejects.toThrow("Too many file types");
-  });
-
-  test("starting scans is rate limited per user", async () => {
-    const { t, userId, asUser } = await setup();
-    await connect(t, userId);
-    for (let i = 0; i < 5; i++) await asUser.mutation(api.scans.start, { query: "", extensions: [] });
-    await expect(asUser.mutation(api.scans.start, { query: "", extensions: [] })).rejects.toThrow("Too many searches");
   });
 
   test("a scan stops at the message limit", async () => {
@@ -536,55 +525,25 @@ describe("Google Chat", () => {
     ).rejects.toThrow("Too many chats picked");
   });
 
-  test("a scan of both reads Gmail, then Chat, and results can be filtered by source", async () => {
-    const { t, userId, asUser } = await setup();
-    await connectChat(t, userId);
-    stubGoogle({
-      "/gmail/v1/users/me/messages": () => Response.json({ messages: [{ id: "g1" }] }),
-      "/gmail/v1/users/me/messages/g1": () =>
-        Response.json({
-          id: "g1",
-          internalDate: "1",
-          payload: {
-            headers: [{ name: "From", value: "bob@x.com" }],
-            parts: [{ filename: "mail.pdf", mimeType: "application/pdf", body: { attachmentId: "att", size: 5 } }],
-          },
-        }),
-      "/v1/spaces": twoSpaces,
-      "/v1/spaces/A/messages": () => Response.json({ messages: [upload("spaces/A/messages/1", "chat.pdf")] }),
-      "/v1/spaces/B/messages": () => Response.json({}),
-    });
-    const scanId = await asUser.mutation(api.scans.start, { query: "", extensions: [], source: "both" });
-    await t.finishAllScheduledFunctions(jest.runAllTimers);
-
-    expect(await asUser.query(api.scans.get, { scanId })).toMatchObject({
-      status: "done",
-      messagesScanned: 2,
-      chatMessagesScanned: 1,
-      attachmentsFound: 2,
-      chatFound: 1,
-    });
-    const files = async (source?: "gmail" | "chat") =>
-      (await asUser.query(api.attachments.allForScan, { scanId, includeInline: false, source }))
-        .map((r) => `${r.source}:${r.filename}`)
-        .sort();
-    expect(await files()).toEqual(["chat:chat.pdf", "gmail:mail.pdf"]);
-    expect(await files("gmail")).toEqual(["gmail:mail.pdf"]);
-    expect(await files("chat")).toEqual(["chat:chat.pdf"]);
+  test("combined Gmail and Chat scans cannot send Gmail searches through Convex", async () => {
+    const { asUser } = await setup();
+    await expect(asUser.mutation(api.scans.start, { query: "", extensions: [], source: "both" })).rejects.toThrow(
+      "Gmail searches now run locally in your browser",
+    );
   });
 
   test("Chat is refused on the server while it's switched off", async () => {
     const { t, userId, asUser } = await setup();
     await connectChat(t, userId);
     process.env.GOOGLE_CHAT = "";
-    await expect(asUser.mutation(api.scans.start, { query: "", extensions: [], source: "both" })).rejects.toThrow(
+    await expect(asUser.mutation(api.scans.start, { query: "", extensions: [], source: "chat" })).rejects.toThrow(
       "CHAT_UNAVAILABLE",
     );
     await expect(asUser.action(api.chat.listChatSpaces, {})).rejects.toThrow("CHAT_UNAVAILABLE");
     expect(await asUser.query(api.gmail.status, {})).toMatchObject({ chatConnected: false });
   });
 
-  test("Gmail scans need the Gmail scope; the Chat filter has a length cap", async () => {
+  test("Gmail scans stay local; the Chat filter has a length cap", async () => {
     const { t, userId, asUser } = await setup();
     await t.run((ctx) =>
       ctx.db.insert("gmailAccounts", {
@@ -597,7 +556,7 @@ describe("Google Chat", () => {
       }),
     );
     await expect(asUser.mutation(api.scans.start, { query: "", extensions: [] })).rejects.toThrow(
-      "GMAIL_NOT_CONNECTED",
+      "Gmail searches now run locally in your browser",
     );
     const long = Array(10).fill('createTime > "2026-01-01T00:00:00.000Z"').join(" AND ");
     await expect(
@@ -623,16 +582,11 @@ describe("Google Chat", () => {
     expect(scan.error).not.toContain("internal");
   });
 
-  test("a scan of both keeps its email results when the account has no Chat", async () => {
-    const { t, userId, asUser } = await setup();
-    await connectChat(t, userId);
-    stubGoogle({
-      "/gmail/v1/users/me/messages": () => Response.json({}),
-      "/v1/spaces": () => new Response("{}", { status: 403 }),
-    });
-    const scanId = await asUser.mutation(api.scans.start, { query: "", extensions: [], source: "both" });
-    await t.finishAllScheduledFunctions(jest.runAllTimers);
-    expect(await asUser.query(api.scans.get, { scanId })).toMatchObject({ status: "done", error: "CHAT_UNAVAILABLE" });
+  test("combined Gmail and Chat scans are refused before calling Google from Convex", async () => {
+    const { asUser } = await setup();
+    await expect(asUser.mutation(api.scans.start, { query: "", extensions: [], source: "both" })).rejects.toThrow(
+      "Gmail searches now run locally in your browser",
+    );
   });
 
   test("accounts without Chat (personal Gmail, Chat turned off) get a friendly error", async () => {
