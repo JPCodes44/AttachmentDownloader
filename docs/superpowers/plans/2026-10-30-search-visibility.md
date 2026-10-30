@@ -50,6 +50,6 @@ Files: review notes and README deployment instructions if needed.
 
 - [x] Request a fresh code review and fix important findings with regression tests.
 - [x] Package frontend production output and deploy to the already confirmed Vercel project. No backend deployment.
-- [ ] Verify live pages, missing URL status, redirects, verification file and final screenshot evidence. Local mobile PDF guide passed at 390px without overflow; browser disconnected before final production checks.
-- [ ] Submit sitemap in Search Console and request homepage indexing; blocked while browser connection is unavailable.
+- [x] Verify live pages, missing URL status, redirects, verification file and final screenshot evidence. Production checks passed: guides and ownership file return 200, missing URL returns 404, canonical/alias redirects return 308 and preserve query strings, metadata matches visible titles. Local mobile PDF guide previously passed at 390px without overflow.
+- [x] Submit sitemap in Search Console: processed successfully with 9 discovered pages. Homepage inspection confirms it is already indexed. An optional refresh request did not produce a completion confirmation; no repeated request was made.
 - [x] Report concrete changes, validation and external indexing limits.
