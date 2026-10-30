@@ -76,6 +76,12 @@ jobs:
             ]
           }
           JSON
+          # Keep the Vercel default production alias from starting Google OAuth
+          # on a different origin than the domain registered with Google.
+          if [ "${{ inputs.environment }}" = production ]; then
+            jq '.routes |= [{ "src": "/(.*)", "has": [{ "type": "host", "value": "attachmentdownloader.vercel.app" }], "status": 308, "headers": { "location": "https://attachmentdownloader.ca/$1" } }] + .' \
+              .vercel/output/config.json > config.tmp && mv config.tmp .vercel/output/config.json
+          fi
           # Only production may be indexed; otherwise staging competes with it in search results.
           if [ "${{ inputs.environment }}" != production ]; then
             jq '.routes |= [{ "src": "/.*", "headers": { "x-robots-tag": "noindex" }, "continue": true }] + .' \
