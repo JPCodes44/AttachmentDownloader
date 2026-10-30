@@ -13,4 +13,4 @@ User-agent: Google-Extended
 User-agent: Applebot-Extended
 Allow: /
 
-Sitemap: https://attachmentdownloader.vercel.app/sitemap.xml
+Sitemap: https://attachmentdownloader.ca/sitemap.xml

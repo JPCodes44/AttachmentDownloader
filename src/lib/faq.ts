@@ -11,7 +11,7 @@ export const FAQ: { q: string; a: string }[] = [
   },
   {
     q: "Is it safe to give this app access to my Gmail?",
-    a: "The app asks Google for read-only access. It can list emails and download attachments, but it can't send, change or delete anything. Attachment files go straight from Gmail to your browser and are never stored on our servers.",
+    a: "Google grants the browser read-only access so it can search messages and retrieve attachments. The app can't send, change or delete email. Gmail search results and attachment files stay in the browser and are not sent to our backend.",
   },
   {
     q: "Can I pick only certain file types, like PDFs or photos?",
@@ -19,6 +19,6 @@ export const FAQ: { q: string; a: string }[] = [
   },
   {
     q: "How do I stop the app from reading my Gmail?",
-    a: "Click \"Disconnect Gmail\" in the app. That revokes the app's access with Google and deletes the stored key. You can also remove it any time from your Google Account's third-party connections page.",
+    a: "Click \"Disconnect Gmail\" in the app to revoke this browser's access and clear its in-memory token. You can also remove the app at any time from your Google Account's third-party connections page.",
   },
 ];

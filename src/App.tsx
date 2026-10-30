@@ -1,9 +1,9 @@
 import { useAuthActions } from "@convex-dev/auth/react";
-import { useAction, useConvexAuth, useQuery } from "convex/react";
+import { useAction, useConvexAuth } from "convex/react";
 import { api } from "../convex/_generated/api";
-import { ConnectGmail } from "./components/ConnectGmail";
-import { Extractor } from "./components/Extractor";
+import { LocalGmail } from "./components/LocalGmail";
 import { SignIn } from "./components/SignIn";
+import { revokeBrowserGmailToken } from "./lib/googleAuth";
 
 export function App() {
   const { isLoading, isAuthenticated } = useConvexAuth();
@@ -15,13 +15,12 @@ export function App() {
 }
 
 function SignedIn() {
-  const gmail = useQuery(api.gmail.status);
-  const disconnect = useAction(api.gmail.disconnect);
   const deleteAccount = useAction(api.account.deleteAccount);
   const { signOut } = useAuthActions();
 
   const confirmDelete = async () => {
     if (!confirm("Delete your account? This revokes Google access and deletes your search results.")) return;
+    await revokeBrowserGmailToken();
     await deleteAccount();
     await signOut().catch(() => {}); // the session is already gone server-side
   };
@@ -34,14 +33,6 @@ function SignedIn() {
           AttachmentDownloader
         </div>
         <div className="topbar-actions">
-          {gmail?.connected && (
-            <>
-              <span className="muted small">{gmail.email}</span>
-              <button className="btn ghost small" onClick={() => void disconnect()}>
-                {gmail.chatConnected ? "Disconnect Google" : "Disconnect Gmail"}
-              </button>
-            </>
-          )}
           <button className="btn ghost small" onClick={() => void signOut()}>
             Sign out
           </button>
@@ -52,15 +43,7 @@ function SignedIn() {
       </header>
 
       <main className="main">
-        {gmail === undefined ? (
-          <div className="muted">Loading…</div>
-        ) : !gmail?.connected ? (
-          <ConnectGmail />
-        ) : gmail.status === "expired" ? (
-          <ConnectGmail expiredEmail={gmail.email} />
-        ) : (
-          <Extractor chatConnected={gmail.chatConnected} driveConnected={gmail.driveConnected} />
-        )}
+        <LocalGmail />
       </main>
     </div>
   );

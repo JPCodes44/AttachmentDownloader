@@ -6,8 +6,8 @@ import { action, type ActionCtx, internalMutation, internalQuery, query } from "
 import { CHAT_SCOPES, chatEnabled, DRIVE_SCOPE } from "./chatApi";
 import { decrypt } from "./crypto";
 import {
+  GMAIL_SCOPE,
   GmailExpiredError,
-  listLabels as fetchLabels,
   refreshAccessToken,
   revokeToken,
 } from "./gmailApi";
@@ -17,9 +17,6 @@ import { deleteScans } from "./scans";
 export function hasChatScopes(scopes: string[] | undefined): boolean {
   return CHAT_SCOPES.every((s) => scopes?.includes(s));
 }
-
-// System labels that work as `label:<id>` in Gmail search.
-const SEARCHABLE_SYSTEM_LABELS = new Set(["INBOX", "SENT", "STARRED", "IMPORTANT"]);
 
 // What the UI needs to know about the user's Gmail connection. Never includes tokens.
 export const status = query({
@@ -119,22 +116,33 @@ export async function revokeStoredToken(ctx: ActionCtx, userId: Id<"users">) {
   }
 }
 
-// A short-lived (1 hour) read-only token so the browser can download file bytes
-// straight from Gmail. The refresh token itself never leaves Convex.
+// Kept as a compatibility endpoint for old clients. Gmail tokens are no longer
+// issued to browser clients by Convex.
 export const getAccessToken = action({
   args: {},
-  handler: (ctx): Promise<AccessToken> => limitedAccessToken(ctx),
+  handler: async (): Promise<AccessToken> => {
+    throw new ConvexError("Gmail now connects in your browser. Reopen the app to connect Gmail locally.");
+  },
+});
+
+// One-time cleanup when a user opens the browser-only Gmail flow. Old versions
+// stored a Gmail refresh token and search results in Convex; revoke and remove
+// those records. Chat-only grants created by the new provider are preserved.
+export const migrateToLocal = action({
+  args: {},
+  handler: async (ctx): Promise<void> => {
+    const userId = await requireUser(ctx);
+    const account = await ctx.runQuery(internal.gmail.getAccount, { userId });
+    if (!account || (account.scopes && !account.scopes.includes(GMAIL_SCOPE))) return;
+    await revokeStoredToken(ctx, userId);
+    await ctx.runMutation(internal.gmail.deleteAccount, { userId });
+  },
 });
 
 export const listLabels = action({
   args: {},
-  handler: async (ctx): Promise<{ id: string; name: string; system: boolean }[]> => {
-    const { accessToken } = await limitedAccessToken(ctx);
-    const { labels = [] } = await fetchLabels(accessToken);
-    return labels
-      .filter((l) => l.type !== "system" || SEARCHABLE_SYSTEM_LABELS.has(l.id))
-      .map((l) => ({ id: l.id, name: l.name, system: l.type === "system" }))
-      .sort((a, b) => Number(a.system) - Number(b.system) || a.name.localeCompare(b.name));
+  handler: async (): Promise<{ id: string; name: string; system: boolean }[]> => {
+    throw new ConvexError("Gmail labels are now loaded directly in your browser.");
   },
 });
 

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Privacy Policy | AttachmentDownloader</title>
     <meta name="description" content="What AttachmentDownloader reads from your Gmail, what it stores, and how to remove its access." />
-    <link rel="canonical" href="https://attachmentdownloader.vercel.app/privacy" />
+    <link rel="canonical" href="https://attachmentdownloader.ca/privacy" />
     <link rel="icon" type="image/svg+xml" href="./public/favicon.svg" />
     <link rel="stylesheet" href="./src/styles.css" />
   </head>
@@ -17,52 +17,47 @@
 
       <main class="doc">
         <h1>Privacy policy</h1>
-        <p class="muted small">Last updated October 19, 2026</p>
+        <p class="muted small">Last updated October 29, 2026</p>
         <p>
-          AttachmentDownloader (the "app", at attachmentdownloader.vercel.app) helps you find attachments in your Gmail and
+          AttachmentDownloader (the "app", at attachmentdownloader.ca) helps you find attachments in your Gmail and
           download them as a ZIP. This page explains what it accesses and keeps.
         </p>
 
         <h2>What the app accesses</h2>
-        <p>When you sign in with Google, the app asks for:</p>
+        <p>Google account sign-in and Gmail access are separate:</p>
         <ul>
           <li>Your basic profile: name, email address and profile picture, used to sign you in.</li>
           <li>
-            Read-only Gmail access (<code>gmail.readonly</code>), used only to search your messages for attachments,
-            list your labels so you can filter by them, and download the attachments you choose.
+            Read-only Gmail access (<code>gmail.readonly</code>), granted directly to your browser when you connect Gmail.
+            Google classifies this permission as able to view Gmail messages and settings; it is required to search
+            messages and retrieve their attachments. The app cannot send, change or delete email.
           </li>
         </ul>
         <p>The app can't send, change or delete any email.</p>
 
-        <h2>What the app stores</h2>
+        <h2>What stays on your device</h2>
         <ul>
-          <li>Your account: the name, email address and picture from Google.</li>
-          <li>
-            An encrypted Google refresh token, which lets the app reach Gmail for you without asking you to sign in
-            each time.
-          </li>
-          <li>
-            Your latest search: the search query and, for each matching attachment, its filename, file type, size,
-            sender, subject and date. Starting a new search deletes the previous one, and every search is deleted
-            automatically after 30 days.
-          </li>
+          <li>Your short-lived Gmail access token, held in browser memory while connected and cleared when you disconnect or close the page.</li>
+          <li>Your search query and matching attachment details, held in browser memory while the page is open.</li>
+          <li>Attachment bytes and the ZIP file, processed in your browser.</li>
         </ul>
         <p>
-          The app does <b>not</b> store attachment contents or email bodies. Your browser downloads attachment files
-          directly from Google's Gmail API and builds the ZIP on your device.
+          Gmail search requests, attachment details and file contents are sent directly between your browser and Google.
+          They are not sent to Convex or our website server. Search results are cleared when you leave or reload the app.
         </p>
 
-        <h2>How your data is protected</h2>
+        <h2>What our backend stores</h2>
         <p>
-          The refresh token is encrypted with AES-256-GCM before it is stored and never reaches your browser. All
-          traffic uses HTTPS. Each account can only read its own searches.
+          Convex stores your basic Google profile (name, email and picture) for account sign-in. It does not receive
+          your Gmail access token, Gmail search query, message details or attachment files. Older Gmail connections
+          from before this change are revoked and their saved search results deleted when you next open the app.
         </p>
 
         <h2>Who processes your data</h2>
         <p>
-          The backend runs on <a href="https://www.convex.dev">Convex</a>, which stores the data above. The website is
-          hosted on <a href="https://vercel.com">Vercel</a>. The app uses no advertising or analytics trackers, and
-          doesn't sell or share your data with anyone else.
+          The account backend runs on <a href="https://www.convex.dev">Convex</a>; the website is hosted on
+          <a href="https://vercel.com">Vercel</a>. Google processes Gmail API requests. The app uses no advertising
+          or analytics trackers and doesn't sell or share your data with anyone else.
         </p>
 
         <h2>Google API Services User Data Policy</h2>
@@ -77,16 +72,16 @@
         <h2>Removing access and deleting data</h2>
         <ul>
           <li>
-            Click <b>Disconnect Gmail</b> in the app. This revokes the app's access with Google and deletes the stored
-            token and your search results.
+          Click <b>Disconnect Gmail</b> in the app. This revokes the browser's Gmail grant and clears the token and
+          search results from this device.
           </li>
           <li>
             You can also remove the app at any time from
             <a href="https://myaccount.google.com/connections">your Google Account's third-party connections</a>.
           </li>
           <li>
-            Click <b>Delete account</b> in the app to revoke Gmail access and permanently delete everything the app
-            stores about you: your account, sign-in records, token and search results.
+            Click <b>Delete account</b> in the app to revoke Gmail access and permanently delete your account and
+            sign-in records from our backend.
           </li>
         </ul>
 

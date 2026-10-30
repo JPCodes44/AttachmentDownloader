@@ -1,6 +1,4 @@
-import { useAction } from "convex/react";
-import { useEffect, useState } from "react";
-import { api } from "../../convex/_generated/api";
+import { useState } from "react";
 import {
   buildChatFilter,
   buildQuery,
@@ -28,23 +26,18 @@ export type ScanRequest = {
 export function FilterBar({
   mode,
   scanning,
+  labels = [],
   onScan,
 }: {
   mode: ScanMode;
   scanning: boolean;
+  labels?: Label[];
   onScan: (scan: ScanRequest) => void;
 }) {
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const [chatTypes, setChatTypes] = useState<ChatType[]>([]);
   const [chatNames, setChatNames] = useState<string[]>([]);
   const [customQuery, setCustomQuery] = useState<string | null>(null);
-  const [labels, setLabels] = useState<Label[]>([]);
-  const listLabels = useAction(api.gmail.listLabels);
-
-  useEffect(() => {
-    listLabels().then(setLabels, () => setLabels([]));
-  }, [listLabels]);
-
   const set = <K extends keyof Filters>(key: K, value: Filters[K]) => {
     setFilters((f) => ({ ...f, [key]: value }));
     setCustomQuery(null);

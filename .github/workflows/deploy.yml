@@ -50,6 +50,7 @@ jobs:
         run: bun run build
         env:
           VITE_CONVEX_URL: ${{ vars.CONVEX_URL }}
+          VITE_GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
           VITE_GOOGLE_CHAT: ${{ vars.GOOGLE_CHAT || 'off' }}
 
       - name: Package for Vercel (static files, clean page URLs, single-page-app fallback)
@@ -61,7 +62,7 @@ jobs:
             "version": 3,
             "routes": [
               { "src": "/.*", "headers": {
-                "content-security-policy": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.convex.cloud wss://*.convex.cloud https://*.convex.site https://gmail.googleapis.com https://chat.googleapis.com https://www.googleapis.com; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'",
+                "content-security-policy": "default-src 'self'; script-src 'self' https://accounts.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.convex.cloud wss://*.convex.cloud https://*.convex.site https://gmail.googleapis.com https://chat.googleapis.com https://www.googleapis.com https://oauth2.googleapis.com https://accounts.google.com; frame-src https://accounts.google.com/gsi/; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'",
                 "x-frame-options": "DENY",
                 "x-content-type-options": "nosniff",
                 "referrer-policy": "strict-origin-when-cross-origin",

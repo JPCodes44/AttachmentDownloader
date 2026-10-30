@@ -13,6 +13,9 @@ export type DownloadItem = {
   mimeType: string;
   size: number;
   date: number;
+  from?: string;
+  subject?: string;
+  isInline?: boolean;
 };
 
 export type DownloadProgress = { done: number; total: number; bytes: number; failed: string[] };
@@ -72,7 +75,7 @@ function attachmentRequest(item: DownloadItem) {
   };
 }
 
-// Fetches attachment bytes straight from Google with a short-lived token from Convex,
+// Fetches attachment bytes straight from Google with a short-lived browser token,
 // zips them in the browser and saves the result. Returns false if the user cancelled.
 export async function downloadAttachments(
   items: DownloadItem[],

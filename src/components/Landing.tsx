@@ -26,8 +26,8 @@ export function Landing({ onSignIn }: { onSignIn?: () => void }) {
             Sign in with Google
           </button>
           <p className="muted small">
-            Google will ask for <b>read-only</b> Gmail access. The app can list emails and download attachments, but it
-            can't send, change or delete anything.
+            Google will ask for <b>read-only</b> Gmail access. Searches and downloads run in your browser; Gmail data
+            and files are not sent to our backend.
           </p>
         </section>
 
@@ -35,7 +35,7 @@ export function Landing({ onSignIn }: { onSignIn?: () => void }) {
           <h2>How it works</h2>
           <ol className="steps">
             <li>
-              <b>Sign in with Google.</b> One consent screen, read-only access.
+              <b>Sign in, then connect Gmail.</b> Account sign-in and Gmail permission are separate.
             </li>
             <li>
               <b>Search your inbox.</b> Pick a sender, date range, label or file type, or type any Gmail search.
@@ -44,7 +44,7 @@ export function Landing({ onSignIn }: { onSignIn?: () => void }) {
               <b>Pick the files.</b> Every attachment that matches is listed with its sender, subject and size.
             </li>
             <li>
-              <b>Download one ZIP.</b> Files go straight from Gmail to your browser, never through our servers.
+              <b>Download one ZIP.</b> Gmail data and files go straight to your browser, where the ZIP is built.
             </li>
           </ol>
         </section>

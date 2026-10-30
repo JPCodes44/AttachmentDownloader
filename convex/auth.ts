@@ -5,10 +5,9 @@ import type { Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 import { CHAT_SCOPES, chatEnabled, DRIVE_SCOPE } from "./chatApi";
 import { encrypt } from "./crypto";
-import { GMAIL_SCOPE } from "./gmailApi";
 
-// What profile() hands to createOrUpdateUser. The refresh token is already
-// encrypted here, so it is never in plaintext in a mutation argument.
+// What profile() hands to createOrUpdateUser. The optional encrypted token is
+// only used by the Chat provider; Gmail access never enters Convex Auth.
 export type GoogleSignInProfile = {
   email: string;
   name?: string;
@@ -20,16 +19,25 @@ export type GoogleSignInProfile = {
   scopes?: string[];
 };
 
-// Both providers sign in to the same Google account; only the requested scopes differ.
+// Both providers sign in to the same Google account. The default provider is
+// profile-only; Gmail access is requested by the browser and never enters Convex.
 const GOOGLE_PROVIDERS = ["google", "google-chat"];
 
-const offlineAccess = { access_type: "offline", prompt: "consent", include_granted_scopes: "true" };
-
-async function googleProfile(google: GoogleProfile, tokens: TokenSet) {
-  // Google lets people untick boxes, so check what was granted.
-  const scopes = tokens.scope?.split(" ") ?? [];
-  const granted = scopes.includes(GMAIL_SCOPE) || CHAT_SCOPES.some((s) => scopes.includes(s));
+async function googleProfile(google: GoogleProfile) {
   if (google.email_verified !== true) throw new Error("Google account email is not verified");
+  return {
+    id: google.sub,
+    googleSub: google.sub,
+    email: google.email,
+    name: google.name,
+    image: google.picture,
+  };
+}
+
+async function googleChatProfile(google: GoogleProfile, tokens: TokenSet) {
+  if (google.email_verified !== true) throw new Error("Google account email is not verified");
+  const scopes = tokens.scope?.split(" ") ?? [];
+  const granted = CHAT_SCOPES.every((scope) => scopes.includes(scope));
   return {
     id: google.sub,
     googleSub: google.sub,
@@ -42,9 +50,7 @@ async function googleProfile(google: GoogleProfile, tokens: TokenSet) {
   };
 }
 
-// "Connect Google Chat": the same Google client asking for Chat (and Drive, for files
-// shared into chats from Drive) on top of Gmail. include_granted_scopes makes the
-// new refresh token cover all of them.
+// Chat/Drive access stays separate from the browser-only Gmail permission.
 function googleChatProvider() {
   return Google({
     id: "google-chat",
@@ -53,20 +59,20 @@ function googleChatProvider() {
     clientSecret: process.env.AUTH_GOOGLE_SECRET,
     authorization: {
       params: {
-        scope: `openid email profile ${GMAIL_SCOPE} ${CHAT_SCOPES.join(" ")} ${DRIVE_SCOPE}`,
-        ...offlineAccess,
+        scope: `openid email profile ${CHAT_SCOPES.join(" ")} ${DRIVE_SCOPE}`,
+        access_type: "offline",
+        prompt: "consent",
       },
     },
-    profile: googleProfile,
+    profile: googleChatProfile,
   });
 }
 
 export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
   providers: [
     Google({
-      // One consent screen: sign in AND read-only Gmail access, with a refresh
-      // token (offline + consent) so scans keep working after the hour is up.
-      authorization: { params: { scope: `openid email profile ${GMAIL_SCOPE}`, ...offlineAccess } },
+      // App account sign-in only. Gmail connects separately in the browser.
+      authorization: { params: { scope: "openid email profile" } },
       profile: googleProfile,
     }),
     // Only registered when enabled, so nobody can ask Google for scopes the

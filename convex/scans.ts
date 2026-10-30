@@ -89,7 +89,10 @@ export const start = mutation({
   },
   handler: async (ctx, args) => {
     const source = args.source ?? "gmail";
-    const withChat = source !== "gmail";
+    if (source !== "chat") {
+      throw new ConvexError("Gmail searches now run locally in your browser. Reload the app to use the local Gmail flow.");
+    }
+    const withChat = true;
     const chatFilter = (args.chatFilter ?? "").trim();
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new ConvexError("Sign in first");
@@ -200,6 +203,10 @@ export const scanPage = internalAction({
   handler: async (ctx, { scanId, pageToken }): Promise<void> => {
     const scan = await ctx.runQuery(internal.scans.getInternal, { scanId });
     if (!scan || scan.status !== "running") return;
+    if (scan.source !== "chat") {
+      await ctx.runMutation(internal.scans.recordError, { scanId, error: "GMAIL_LOCAL_ONLY" });
+      return;
+    }
     try {
       const { accessToken } = await accessTokenForUser(ctx, scan.userId);
       const page = await listMessages(accessToken, scan.query, pageToken);

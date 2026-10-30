@@ -25,7 +25,7 @@ const faqSchema = {
     {
       "@type": "WebApplication",
       name: "AttachmentDownloader",
-      url: "https://attachmentdownloader.vercel.app/",
+      url: "https://attachmentdownloader.ca/",
       applicationCategory: "UtilitiesApplication",
       operatingSystem: "Any (web browser)",
       description: "Find attachments in Gmail and download all of them, or the ones you pick, as one ZIP.",

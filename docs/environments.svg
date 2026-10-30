@@ -20,7 +20,7 @@
 <rect x="820.0" y="110" width="340" height="214" rx="14" fill="#e2f3ea" stroke="#1f7a4d" stroke-width="2"/>
 <text x="990.0" y="152" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="24" font-weight="800" fill="#19202c" text-anchor="middle">production</text>
 <text x="990.0" y="178" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#5d6779" text-anchor="middle">the real one</text>
-<text x="990.0" y="226" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" font-weight="400" fill="#5d6779" text-anchor="middle">attachmentdownloader.vercel.app</text>
+<text x="990.0" y="226" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" font-weight="400" fill="#5d6779" text-anchor="middle">attachmentdownloader.ca</text>
 <text x="990.0" y="260" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" font-weight="600" fill="#19202c" text-anchor="middle">Convex: default prod</text>
 <text x="990.0" y="294" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" font-weight="600" fill="#19202c" text-anchor="middle">updates after you approve</text>
 </svg>
